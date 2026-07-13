@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#1C3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* ---------- schermata di accesso ---------- */
+  .gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; padding-top: calc(24px + env(safe-area-inset-top));
+  }
+  .gate-box { width: 100%; max-width: 390px; text-align: center; }
+  .gate-mark {
+    width: 84px; height: 84px; margin: 0 auto 22px; border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--forest-deep); border: 2px solid var(--brass);
+    box-shadow: 0 10px 34px var(--shadow);
+  }
+  .gate-mark svg { width: 44px; height: 44px; color: var(--brass); }
+  .gate h1 {
+    font-family: var(--disp); font-weight: 600; font-size: clamp(25px, 6vw, 33px);
+    letter-spacing: -.025em; line-height: 1.12; margin-bottom: 8px;
+  }
+  .gate .lead { color: var(--paper-soft); font-size: 14.5px; margin-bottom: 28px; line-height: 1.55; }
+  html[data-theme="light"] .gate .lead { color: var(--ink-soft); }
+  .gate-form {
+    background: var(--paper); border-radius: 18px; padding: 22px 20px 20px;
+    box-shadow: 0 8px 34px var(--shadow); text-align: left;
+  }
+  .gate-form .fld:last-of-type { margin-bottom: 18px; }
+  .gate-form .btn { width: 100%; padding: 14px; font-size: 15px; }
+  .gate-err {
+    display: none; background: color-mix(in srgb, var(--rust) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--rust) 45%, transparent);
+    color: var(--rust); border-radius: 11px; padding: 10px 13px;
+    font-size: 13.5px; font-weight: 600; margin-bottom: 14px; line-height: 1.45;
+  }
+  .gate-err.on { display: block; }
+  .gate-note { margin-top: 20px; font-size: 12.5px; color: var(--paper-soft); opacity: .75; line-height: 1.6; }
+  html[data-theme="light"] .gate-note { color: var(--ink-soft); }
+
+  /* ---------- portale ---------- */
+  .home-head {
+    text-align: center; padding: 34px 20px 10px;
+    padding-top: calc(34px + env(safe-area-inset-top));
+  }
+  .home-head .crest {
+    width: 62px; height: 62px; margin: 0 auto 16px; border-radius: 17px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--forest-deep); border: 2px solid var(--brass);
+  }
+  .home-head .crest svg { width: 32px; height: 32px; color: var(--brass); }
+  .home-head h1 {
+    font-family: var(--disp); font-weight: 600; font-size: clamp(26px, 6.5vw, 38px);
+    letter-spacing: -.025em; line-height: 1.1;
+  }
+  .home-head .who { margin-top: 9px; font-size: 13.5px; color: var(--brass); font-weight: 600; }
+  html[data-theme="light"] .home-head .who { color: var(--rust); }
+
+  .tools {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px; margin-top: 30px;
+  }
+  .tool {
+    display: block; background: var(--paper); color: var(--ink);
+    border: 1px solid var(--paper-edge); border-radius: 18px; padding: 26px 24px;
+    box-shadow: 0 6px 26px var(--shadow); transition: .16s; position: relative; overflow: hidden;
+  }
+  .tool:hover { transform: translateY(-3px); box-shadow: 0 14px 38px var(--shadow); border-color: var(--brass); }
+  .tool .ic {
+    width: 54px; height: 54px; border-radius: 15px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--brass) 18%, var(--paper-soft));
+  }
+  .tool .ic svg { width: 27px; height: 27px; color: var(--rust); }
+  .tool h2 {
+    font-family: var(--disp); font-weight: 600; font-size: 21px;
+    letter-spacing: -.01em; margin-bottom: 6px;
+  }
+  .tool p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 14px; }
+  .tool .go {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700; color: var(--rust);
+  }
+  .tool .go svg { width: 14px; height: 14px; transition: .16s; }
+  .tool:hover .go svg { transform: translateX(3px); }
+  .tool .stat {
+    position: absolute; top: 22px; right: 22px;
+    font-size: 12px; font-weight: 700; color: var(--ink-soft);
+    background: var(--paper-soft); border-radius: 99px; padding: 5px 11px;
+  }
+
+  .home-foot {
+    display: flex; justify-content: center; gap: 10px; margin-top: 34px; flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ACCESSO ============ -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-box">
+    <div class="gate-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/>
+        <path d="M9.5 21v-6h5v6"/>
+      </svg>
+    </div>
+    <h1>Famiglia<br>Catenazzo Renò</h1>
+    <p class="lead">Spazio privato di casa. Serve l'accesso per entrare.</p>
+
+    <div class="gate-form">
+      <div class="gate-err" id="gateErr"></div>
+      <div class="fld">
+        <label for="gEmail">Email</label>
+        <input type="email" id="gEmail" autocomplete="username" autocapitalize="none" placeholder="nome@esempio.it">
+      </div>
+      <div class="fld">
+        <label for="gPass">Password</label>
+        <input type="password" id="gPass" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn" id="gateBtn">Entra</button>
+    </div>
+    <p class="gate-note">Gli accessi si creano dal pannello Supabase.<br>Nessuno può vedere i contenuti senza essere entrato.</p>
+  </div>
+</div>
+
+<!-- ============ PORTALE ============ -->
+<div id="portal" hidden>
+  <div class="home-head">
+    <div class="crest">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/>
+        <path d="M9.5 21v-6h5v6"/>
+      </svg>
+    </div>
+    <h1>Famiglia Catenazzo Renò</h1>
+    <div class="who" id="who"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="tools">
+
+      <a class="tool" href="ricettario.html">
+        <span class="stat" id="stRec">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <path d="M3 11h18"/><path d="M5 11V7a7 7 0 0114 0v4"/><path d="M4 11h16v2a8 8 0 01-16 0z"/>
+          </svg>
+        </div>
+        <h2>Il nostro ricettario</h2>
+        <p>Ricette di casa, menù della settimana e lista della spesa con i prodotti di stagione.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a class="tool" href="biblioteca.html">
+        <span class="stat" id="stBook">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+          </svg>
+        </div>
+        <h2>La mia biblioteca</h2>
+        <p>I libri di casa: chi li ha letti, chi li ha in prestito, quali sono in vendita.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a class="tool" href="spese.html">
+        <span class="stat" id="stExp">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>
+          </svg>
+        </div>
+        <h2>Le spese di casa</h2>
+        <p>Estratto conto letto e diviso per tipologia, con il totale di ogni mese.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+    </div>
+
+    <div class="home-foot">
+      <button class="btn-ghost" id="themeBtn">🎨 Tema</button>
+      <button class="btn-ghost" id="outBtn">Esci</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="famiglia.js"></script>
+<script>
+/* ---------- accesso ---------- */
+function showErr(msg) {
+  var e = $("gateErr");
+  e.textContent = msg;
+  e.classList.add("on");
+}
+function doLogin() {
+  var email = $("gEmail").value.trim(), pass = $("gPass").value;
+  if (!email || !pass) { showErr("Inserisci email e password."); return; }
+  var btn = $("gateBtn");
+  btn.disabled = true; btn.textContent = "Attendi…";
+  $("gateErr").classList.remove("on");
+  sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
+    btn.disabled = false; btn.textContent = "Entra";
+    if (r.error) {
+      var m = r.error.message || "";
+      if (/invalid login/i.test(m)) showErr("Email o password non corrette.");
+      else if (/not confirmed/i.test(m)) showErr("Accesso non ancora confermato. Controlla la posta.");
+      else showErr("Accesso non riuscito: " + m);
+      return;
+    }
+    enterPortal(r.data.user);
+  }).catch(function () {
+    btn.disabled = false; btn.textContent = "Entra";
+    showErr("Connessione non riuscita. Controlla la rete.");
+  });
+}
+$("gateBtn").addEventListener("click", doLogin);
+["gEmail", "gPass"].forEach(function (id) {
+  $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+});
+
+/* ---------- portale ---------- */
+function enterPortal(user) {
+  currentUser = user;
+  $("gate").hidden = true;
+  $("portal").hidden = false;
+  var nome = (user.email || "").split("@")[0];
+  $("who").textContent = "Sei entrato come " + nome;
+  loadStats();
+}
+function loadStats() {
+  sb.from("recipes").select("id", { count: "exact", head: true }).then(function (r) {
+    if (!r.error) $("stRec").textContent = r.count + (r.count === 1 ? " ricetta" : " ricette");
+  });
+  sb.from("books").select("id", { count: "exact", head: true }).then(function (r) {
+    if (!r.error) $("stBook").textContent = r.count + (r.count === 1 ? " libro" : " libri");
+  });
+  sb.from("shopping_items").select("id", { count: "exact", head: true }).eq("done", false).then(function (r) {
+    if (!r.error && r.count > 0) {
+      $("stRec").textContent += " · 🛒 " + r.count;
+    }
+  });
+  var y = new Date().getFullYear(), m = new Date().getMonth() + 1;
+  var from = y + "-" + String(m).padStart(2, "0") + "-01";
+  sb.from("expenses").select("amount").gte("date", from).lt("amount", 0).then(function (r) {
+    if (r.error) { $("stExp").textContent = "—"; return; }
+    if (!r.data.length) { $("stExp").textContent = "nessun dato"; return; }
+    var tot = r.data.reduce(function (s, x) { return s + Math.abs(Number(x.amount)); }, 0);
+    $("stExp").textContent = fmtEur(tot) + " · " + MESI_BREVI[m];
+  });
+}
+$("themeBtn").addEventListener("click", toggleTheme);
+$("outBtn").addEventListener("click", function () {
+  sb.auth.signOut().then(function () { location.reload(); });
+});
+
+/* ---------- avvio ---------- */
+sb.auth.getSession().then(function (r) {
+  if (r.data.session) enterPortal(r.data.session.user);
+  else { $("gate").hidden = false; $("gEmail").focus(); }
+});
+</script>
+</body>
+</html>
