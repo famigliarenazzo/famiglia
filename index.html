@@ -110,6 +110,24 @@
   }
   .home-foot .btn-ghost { padding: 9px 14px; font-size: 13px; }
 
+  /* ---------- invito a installare ---------- */
+  .install {
+    display: none; align-items: center; gap: 13px; margin-top: 18px; padding: 14px 16px;
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 14px;
+    box-shadow: 0 4px 18px var(--shadow);
+  }
+  .install.on { display: flex; }
+  .install .ic {
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: var(--forest-deep); display: flex; align-items: center; justify-content: center;
+  }
+  .install .ic img { width: 42px; height: 42px; border-radius: 11px; }
+  .install .tx { flex: 1; min-width: 0; }
+  .install .tx b { font-size: 13.5px; color: var(--ink); display: block; }
+  .install .tx span { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+  .install .x { color: var(--ink-soft); font-size: 13px; padding: 6px; flex-shrink: 0; }
+  .install .btn { flex-shrink: 0; padding: 9px 15px; font-size: 13px; }
+
   /* Su schermo alto: niente scroll, tutto in una videata. */
   @media (min-height: 700px) and (min-width: 700px) {
     #portal { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
@@ -207,6 +225,16 @@
 
     </div>
 
+    <div class="install" id="install">
+      <span class="ic"><img src="icon-192.png" alt=""></span>
+      <span class="tx">
+        <b>Tieni la casa a portata di mano</b>
+        <span id="installTx">Installa l'app sul telefono: si apre a tutto schermo, come le altre.</span>
+      </span>
+      <button class="btn" id="installGo">Installa</button>
+      <button class="x" id="installNo">✕</button>
+    </div>
+
     <div class="home-foot">
       <button class="btn-ghost" id="themeBtn">🎨 Tema</button>
       <button class="btn-ghost" id="outBtn">Esci</button>
@@ -262,6 +290,7 @@ function enterPortal(user) {
   var nome = (user.email || "").split("@")[0];
   $("who").textContent = "Sei entrato come " + nome;
   loadStats();
+  maybeShowInstall();
 }
 function loadStats() {
   sb.from("recipes").select("id", { count: "exact", head: true }).then(function (r) {
@@ -285,6 +314,60 @@ function loadStats() {
   });
 }
 $("themeBtn").addEventListener("click", toggleTheme);
+
+/* ---------- invito a installare ----------
+   Android propone l'installazione da solo (evento beforeinstallprompt).
+   iPhone no: Safari vuole "Aggiungi alla schermata Home" a mano, quindi
+   lì spiego come si fa invece di mostrare un pulsante che non funziona. */
+var deferredInstall = null;
+
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;   /* iOS */
+}
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function installDismissed() {
+  try { return localStorage.getItem("installNo") === "1"; } catch (e) { return false; }
+}
+
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  deferredInstall = e;
+  maybeShowInstall();
+});
+window.addEventListener("appinstalled", function () {
+  $("install").classList.remove("on");
+  toast("Installata! La trovi con le altre app.");
+});
+
+function maybeShowInstall() {
+  if (isStandalone() || installDismissed()) return;   /* già installata */
+  if (isIOS()) {
+    /* niente pulsante: su iPhone non esiste un modo automatico */
+    $("installTx").innerHTML = "Tocca <b>Condividi</b> in basso, poi "
+      + "<b>Aggiungi alla schermata Home</b>: si apre a tutto schermo, come le altre app.";
+    $("installGo").hidden = true;
+    $("install").classList.add("on");
+  } else if (deferredInstall) {
+    $("installGo").hidden = false;
+    $("install").classList.add("on");
+  }
+}
+$("installGo").addEventListener("click", function () {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.then(function () {
+    deferredInstall = null;
+    $("install").classList.remove("on");
+  });
+});
+$("installNo").addEventListener("click", function () {
+  $("install").classList.remove("on");
+  try { localStorage.setItem("installNo", "1"); } catch (e) { }
+});
+
 $("outBtn").addEventListener("click", function () {
   sb.auth.signOut().then(function () {
     currentUser = null;
