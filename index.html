@@ -322,8 +322,12 @@ $("themeBtn").addEventListener("click", toggleTheme);
 var deferredInstall = null;
 
 function isStandalone() {
-  return window.matchMedia("(display-mode: standalone)").matches
-    || window.navigator.standalone === true;   /* iOS */
+  /* Un controllo accessorio non deve poter bloccare il portale:
+     se il browser non ha matchMedia, faccio finta di niente. */
+  try {
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+  } catch (e) { }
+  return window.navigator.standalone === true;   /* iOS */
 }
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -343,16 +347,21 @@ window.addEventListener("appinstalled", function () {
 });
 
 function maybeShowInstall() {
-  if (isStandalone() || installDismissed()) return;   /* già installata */
-  if (isIOS()) {
-    /* niente pulsante: su iPhone non esiste un modo automatico */
-    $("installTx").innerHTML = "Tocca <b>Condividi</b> in basso, poi "
-      + "<b>Aggiungi alla schermata Home</b>: si apre a tutto schermo, come le altre app.";
-    $("installGo").hidden = true;
-    $("install").classList.add("on");
-  } else if (deferredInstall) {
-    $("installGo").hidden = false;
-    $("install").classList.add("on");
+  try {
+    if (isStandalone() || installDismissed()) return;   /* già installata */
+    if (isIOS()) {
+      /* niente pulsante: su iPhone non esiste un modo automatico */
+      $("installTx").innerHTML = "Tocca <b>Condividi</b> in basso, poi "
+        + "<b>Aggiungi alla schermata Home</b>: si apre a tutto schermo, come le altre app.";
+      $("installGo").hidden = true;
+      $("install").classList.add("on");
+    } else if (deferredInstall) {
+      $("installGo").hidden = false;
+      $("install").classList.add("on");
+    }
+  } catch (e) {
+    /* l'invito è un di più: se non riesce, il portale funziona lo stesso */
+    console.warn("invito a installare non mostrato:", e);
   }
 }
 $("installGo").addEventListener("click", function () {

@@ -10,15 +10,26 @@
   --ink: #221F18; --ink-soft: #6E6452; --rust: #9A5440;
   --shadow: rgba(11, 22, 17, .35); --r: 14px;
   --bg-top: #24412F;
+  /* Ottone leggibile come testo, e colore del testo sopra l'ottone.
+     Nel tema scuro vanno bene così; il tema chiaro li ridefinisce, perché
+     lì l'ottone su fondo chiaro sparirebbe. */
+  --brass-text: #C49A4A;
+  --on-brass: #152620;
   --disp: "Bricolage Grotesque", system-ui, sans-serif;
   --body: "Hanken Grotesk", system-ui, sans-serif;
 }
 html[data-theme="light"] {
-  --forest: #E8DFCB; --forest-deep: #F2EAD9; --forest-line: #DDCDAC;
+  --forest: #E8DFCB; --forest-deep: #F2EAD9; --forest-line: #D3C0A0;
   --paper: #FFFDF7; --paper-soft: #F6EFE0; --paper-edge: #E2D5BB;
-  --ink: #221F18; --ink-soft: #6E6452;
+  --ink: #221F18; --ink-soft: #5C523F;
   --shadow: rgba(90, 75, 45, .16);
   --bg-top: #EFE6D2;
+  /* L'ottone su fondo chiaro non si legge (contrasto 1.96): nel tema chiaro
+     serve una versione più scura per il testo e i bordi in evidenza. */
+  --brass-text: #7A5A1E;
+  /* Il verde profondo qui diventa quasi bianco, quindi non può fare da testo
+     sopra l'ottone: uso l'inchiostro. */
+  --on-brass: #221F18;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,7 +62,7 @@ html[data-theme="light"] body { color: var(--ink); }
   border: 1px solid var(--forest-line); color: var(--paper-soft); transition: .13s;
 }
 html[data-theme="light"] .top .back { border-color: var(--paper-edge); color: var(--ink-soft); }
-.top .back:hover { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+.top .back:hover { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
 .top .back svg { width: 18px; height: 18px; }
 .top .ttl { flex: 1; min-width: 0; }
 .top h1 {
@@ -65,7 +76,7 @@ html[data-theme="light"] .top .sub { color: var(--rust); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px 18px; border-radius: 13px; font-weight: 700; font-size: 14.5px;
-  background: var(--brass); color: var(--forest-deep); transition: .13s;
+  background: var(--brass); color: var(--on-brass); transition: .13s;
 }
 .btn:hover { background: var(--brass-bright); }
 .btn svg { width: 17px; height: 17px; }
@@ -75,10 +86,39 @@ html[data-theme="light"] .top .sub { color: var(--rust); }
   border: 1px solid var(--forest-line); color: var(--paper-soft); transition: .13s;
 }
 html[data-theme="light"] .btn-ghost { border-color: var(--paper-edge); color: var(--ink-soft); }
-.btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
+.btn-ghost:hover { border-color: var(--brass); color: var(--brass-text); }
 .btn-ghost svg { width: 16px; height: 16px; }
-.btn-ghost.on { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+.btn-ghost.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
 .btn:disabled, .btn-ghost:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Su fondo CHIARO (dentro le finestre, sulle schede di carta) il colore
+   chiaro di btn-ghost sparirebbe: contrasto 1.15, cioè illeggibile.
+   Qui il testo torna a essere inchiostro. Vale in entrambi i temi, perché
+   il problema non è il tema ma il fondo su cui il pulsante appoggia. */
+.sheet .btn-ghost,
+.card .btn-ghost,
+.rv-foot .btn-ghost,
+.sheet-foot .btn-ghost,
+.sheet-head .btn-ghost,
+.install .btn-ghost {
+  border-color: var(--paper-edge);
+  color: var(--ink-soft);
+}
+.sheet .btn-ghost:hover,
+.card .btn-ghost:hover,
+.rv-foot .btn-ghost:hover,
+.sheet-foot .btn-ghost:hover,
+.sheet-head .btn-ghost:hover,
+.install .btn-ghost:hover {
+  border-color: var(--brass);
+  background: var(--paper-soft);
+  color: var(--ink);            /* non ottone: su carta non si leggerebbe */
+}
+/* Il pulsante di eliminazione resta rosso, ma leggibile. */
+.sheet .btn-ghost[style*="rust"]:hover,
+.rv-foot .btn-ghost[style*="rust"]:hover {
+  background: var(--rust); color: #fff; border-color: var(--rust);
+}
 
 /* ---------- campi ---------- */
 .fld { margin-bottom: 15px; }
