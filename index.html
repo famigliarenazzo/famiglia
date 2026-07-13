@@ -51,57 +51,66 @@
 
   /* ---------- portale ---------- */
   .home-head {
-    text-align: center; padding: 34px 20px 10px;
-    padding-top: calc(34px + env(safe-area-inset-top));
+    text-align: center; padding: 22px 20px 4px;
+    padding-top: calc(20px + env(safe-area-inset-top));
   }
   .home-head .crest {
-    width: 62px; height: 62px; margin: 0 auto 16px; border-radius: 17px;
+    width: 50px; height: 50px; margin: 0 auto 11px; border-radius: 15px;
     display: flex; align-items: center; justify-content: center;
     background: var(--forest-deep); border: 2px solid var(--brass);
   }
-  .home-head .crest svg { width: 32px; height: 32px; color: var(--brass); }
+  .home-head .crest svg { width: 26px; height: 26px; color: var(--brass); }
   .home-head h1 {
-    font-family: var(--disp); font-weight: 600; font-size: clamp(26px, 6.5vw, 38px);
-    letter-spacing: -.025em; line-height: 1.1;
+    font-family: var(--disp); font-weight: 600; font-size: clamp(22px, 5.5vw, 31px);
+    letter-spacing: -.025em; line-height: 1.12;
   }
-  .home-head .who { margin-top: 9px; font-size: 13.5px; color: var(--brass); font-weight: 600; }
+  .home-head .who { margin-top: 6px; font-size: 12.5px; color: var(--brass); font-weight: 600; }
   html[data-theme="light"] .home-head .who { color: var(--rust); }
 
+  #portal .wrap { padding-top: 14px; padding-bottom: 26px; }
+
   .tools {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px; margin-top: 30px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 13px; margin-top: 16px;
   }
   .tool {
     display: block; background: var(--paper); color: var(--ink);
-    border: 1px solid var(--paper-edge); border-radius: 18px; padding: 26px 24px;
-    box-shadow: 0 6px 26px var(--shadow); transition: .16s; position: relative; overflow: hidden;
+    border: 1px solid var(--paper-edge); border-radius: 16px; padding: 18px 18px 16px;
+    box-shadow: 0 5px 22px var(--shadow); transition: .16s; position: relative;
   }
-  .tool:hover { transform: translateY(-3px); box-shadow: 0 14px 38px var(--shadow); border-color: var(--brass); }
+  .tool:hover { transform: translateY(-3px); box-shadow: 0 13px 34px var(--shadow); border-color: var(--brass); }
   .tool .ic {
-    width: 54px; height: 54px; border-radius: 15px; margin-bottom: 16px;
+    width: 42px; height: 42px; border-radius: 12px; margin-bottom: 11px;
     display: flex; align-items: center; justify-content: center;
     background: color-mix(in srgb, var(--brass) 18%, var(--paper-soft));
   }
-  .tool .ic svg { width: 27px; height: 27px; color: var(--rust); }
+  .tool .ic svg { width: 22px; height: 22px; color: var(--rust); }
   .tool h2 {
-    font-family: var(--disp); font-weight: 600; font-size: 21px;
-    letter-spacing: -.01em; margin-bottom: 6px;
+    font-family: var(--disp); font-weight: 600; font-size: 18.5px;
+    letter-spacing: -.01em; margin-bottom: 4px;
   }
-  .tool p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 14px; }
+  .tool p { font-size: 12.8px; color: var(--ink-soft); line-height: 1.45; margin-bottom: 10px; }
   .tool .go {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 700; color: var(--rust);
+    font-size: 12.5px; font-weight: 700; color: var(--rust);
   }
-  .tool .go svg { width: 14px; height: 14px; transition: .16s; }
+  .tool .go svg { width: 13px; height: 13px; transition: .16s; }
   .tool:hover .go svg { transform: translateX(3px); }
   .tool .stat {
-    position: absolute; top: 22px; right: 22px;
-    font-size: 12px; font-weight: 700; color: var(--ink-soft);
-    background: var(--paper-soft); border-radius: 99px; padding: 5px 11px;
+    position: absolute; top: 17px; right: 17px;
+    font-size: 11.5px; font-weight: 700; color: var(--ink-soft);
+    background: var(--paper-soft); border-radius: 99px; padding: 4px 10px;
   }
 
   .home-foot {
-    display: flex; justify-content: center; gap: 10px; margin-top: 34px; flex-wrap: wrap;
+    display: flex; justify-content: center; gap: 9px; margin-top: 20px; flex-wrap: wrap;
+  }
+  .home-foot .btn-ghost { padding: 9px 14px; font-size: 13px; }
+
+  /* Su schermo alto: niente scroll, tutto in una videata. */
+  @media (min-height: 700px) and (min-width: 700px) {
+    #portal { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+    .home-head { padding-top: 0; }
   }
 </style>
 </head>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>La mia biblioteca · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#1C3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* ---------- barra strumenti ---------- */
+  .bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .search { position: relative; flex: 1; min-width: 190px; }
+  .search input {
+    width: 100%; padding: 11px 38px 11px 40px; border-radius: 12px;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .search input { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .search input::placeholder { color: color-mix(in srgb, var(--paper-soft) 60%, transparent); }
+  .search input:focus { outline: none; border-color: var(--brass); }
+  .search .mag {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--brass); pointer-events: none;
+  }
+  .search .clr {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; border-radius: 8px; display: none;
+    align-items: center; justify-content: center; color: var(--paper-soft); font-size: 13px;
+  }
+  .search.has .clr { display: flex; }
+  .fsel {
+    padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; max-width: 165px;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .fsel { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .fsel:focus { outline: none; border-color: var(--brass); }
+  .vtoggle { display: flex; border: 1px solid var(--forest-line); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
+  html[data-theme="light"] .vtoggle { border-color: var(--paper-edge); }
+  .vtoggle button {
+    width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    color: var(--paper-soft); transition: .13s;
+  }
+  html[data-theme="light"] .vtoggle button { color: var(--ink-soft); }
+  .vtoggle button.on { background: var(--brass); color: var(--forest-deep); }
+  .vtoggle svg { width: 17px; height: 17px; }
+  .count { font-size: 12.5px; color: var(--paper-soft); white-space: nowrap; }
+  html[data-theme="light"] .count { color: var(--ink-soft); }
+  .count b { color: var(--brass); }
+
+  /* ---------- scaffale ---------- */
+  .shelf {
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r);
+    padding: 20px 16px; box-shadow: 0 4px 20px var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end;
+  }
+  .spine {
+    width: 27px; border-radius: 3px 3px 1px 1px; cursor: pointer;
+    display: flex; align-items: flex-end; justify-content: center;
+    position: relative; transition: .14s; flex-shrink: 0;
+    box-shadow: inset -3px 0 6px rgba(0, 0, 0, .18), 0 2px 5px rgba(0, 0, 0, .2);
+  }
+  .spine:hover { transform: translateY(-7px); box-shadow: inset -3px 0 6px rgba(0,0,0,.18), 0 8px 16px rgba(0,0,0,.3); }
+  .spine span {
+    writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);
+    font-family: var(--disp); font-size: 10.5px; font-weight: 600; color: #fff;
+    padding: 8px 0 10px; white-space: nowrap; overflow: hidden;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .45); max-height: 100%;
+  }
+  .spine.dark span { color: #2A2416; text-shadow: 0 1px 1px rgba(255, 255, 255, .3); }
+  .spine .mk {
+    position: absolute; top: 3px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; line-height: 1;
+  }
+
+  /* ---------- griglia ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+  .bcard {
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 13px;
+    overflow: hidden; cursor: pointer; transition: .15s; box-shadow: 0 3px 14px var(--shadow);
+  }
+  .bcard:hover { transform: translateY(-4px); box-shadow: 0 12px 28px var(--shadow); border-color: var(--brass); }
+  .bcard .cov {
+    aspect-ratio: 3/4; background: var(--paper-soft);
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .bcard .cov img { width: 100%; height: 100%; object-fit: cover; }
+  .bcard .cov .ph { font-size: 26px; opacity: .3; }
+  .bcard .cov .flag {
+    position: absolute; top: 6px; right: 6px; font-size: 11px;
+    background: rgba(12, 22, 17, .6); backdrop-filter: blur(3px);
+    border-radius: 99px; padding: 3px 7px; color: #fff;
+  }
+  .bcard .nfo { padding: 9px 10px 11px; }
+  .bcard .t {
+    font-family: var(--disp); font-weight: 600; font-size: 13.5px; line-height: 1.25;
+    color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .bcard .a { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bcard mark { background: var(--brass-bright); color: var(--forest-deep); border-radius: 3px; padding: 0 2px; }
+
+  /* ---------- elenco ---------- */
+  .tbl {
+    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r);
+    overflow: hidden; box-shadow: 0 4px 20px var(--shadow);
+  }
+  .trow {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--paper-edge); transition: .12s;
+  }
+  .trow:last-child { border-bottom: none; }
+  .trow:hover { background: var(--paper-soft); }
+  .trow .th { width: 40px; height: 52px; border-radius: 5px; overflow: hidden; background: var(--paper-soft); }
+  .trow .th img { width: 100%; height: 100%; object-fit: cover; }
+  .trow .tt { font-family: var(--disp); font-weight: 600; font-size: 14.5px; color: var(--ink); line-height: 1.25; }
+  .trow .ts { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  .trow mark { background: var(--brass-bright); color: var(--forest-deep); border-radius: 3px; padding: 0 2px; }
+  .trow .tg { font-size: 12px; }
+
+  /* ---------- scheda libro ---------- */
+  .bv { display: grid; grid-template-columns: 168px 1fr; gap: 22px; }
+  .bv .cov { border-radius: 11px; overflow: hidden; background: var(--paper-soft); aspect-ratio: 3/4; }
+  .bv .cov img { width: 100%; height: 100%; object-fit: cover; }
+  .bv .cov .ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 34px; opacity: .3; }
+  .bv h3 { font-family: var(--disp); font-weight: 600; font-size: 21px; line-height: 1.2; color: var(--ink); }
+  .bv .sub { font-size: 14px; color: var(--ink-soft); margin-top: 3px; }
+  .bv .by { font-size: 14px; color: var(--rust); font-weight: 600; margin-top: 7px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 5px 11px;
+  }
+  .chip.hi { background: color-mix(in srgb, var(--brass) 30%, transparent); color: var(--ink); }
+  .rows { margin-top: 16px; }
+  .row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--paper-edge); font-size: 13.5px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { width: 108px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+  .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
+  .readers { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+  .rd {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px;
+    font-size: 12.5px; font-weight: 700; border: 1.5px solid var(--paper-edge);
+    color: var(--ink-soft); transition: .13s; cursor: pointer;
+  }
+  .rd:hover { border-color: var(--brass); }
+  .rd.on { color: #fff; border-color: transparent; }
+  .rd .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .rd.on .dot { background: rgba(255, 255, 255, .85); }
+  @media (max-width: 600px) {
+    .bv { grid-template-columns: 1fr; }
+    .bv .cov { max-width: 190px; margin: 0 auto; }
+    .row { flex-direction: column; gap: 2px; }
+    .row .k { width: auto; }
+  }
+
+  /* ---------- importazione ---------- */
+  .imp-drop {
+    border: 2px dashed var(--paper-edge); border-radius: 14px; padding: 30px 20px;
+    text-align: center; cursor: pointer; transition: .14s;
+  }
+  .imp-drop:hover { border-color: var(--brass); background: var(--paper-soft); }
+  .imp-drop .e { font-size: 34px; margin-bottom: 10px; }
+  .imp-drop .t { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .imp-drop .s { font-size: 12.5px; color: var(--ink-soft); margin-top: 5px; line-height: 1.5; }
+  .prog { margin-top: 18px; display: none; }
+  .prog.on { display: block; }
+  .prog .track { height: 8px; background: var(--paper-soft); border-radius: 99px; overflow: hidden; }
+  .prog .fill { height: 100%; background: var(--brass); width: 0%; transition: width .25s; }
+  .prog .lbl { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="top" id="top"></div>
+
+<div class="wrap">
+  <div style="margin-bottom:14px"><span class="status" id="status"><span class="dot"></span><span>Carico…</span></span></div>
+
+  <div class="bar">
+    <div class="search" id="sWrap">
+      <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" id="q" placeholder="Cerca per titolo, autore, editore…" autocomplete="off">
+      <button class="clr" id="qClr">✕</button>
+    </div>
+    <select class="fsel" id="fOwner"></select>
+    <select class="fsel" id="fGenre"></select>
+    <select class="fsel" id="fAge"></select>
+    <select class="fsel" id="fState">
+      <option value="">Tutti</option>
+      <option value="lent">📕 In prestito</option>
+      <option value="sold">💰 Venduti</option>
+      <option value="gift">🎁 Da regalare</option>
+      <option value="buy">🛒 Da comprare</option>
+    </select>
+    <div class="vtoggle">
+      <button id="vShelf" title="Scaffale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16M9 4v16M14 4v16M19 4v16"/></svg></button>
+      <button id="vGrid" title="Copertine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
+      <button id="vList" title="Elenco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    </div>
+    <button class="btn-ghost" id="impBtn" title="Importa">📥</button>
+    <span class="count" id="cnt"></span>
+  </div>
+
+  <div id="host"><div class="loading"><div class="spin"></div>Carico la biblioteca…</div></div>
+</div>
+
+<!-- scheda libro -->
+<div class="modal" id="bvModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="bvTitle">Libro</h2>
+      <button class="x" id="bvClose">✕</button>
+    </div>
+    <div class="sheet-body" id="bvBody"></div>
+  </div>
+</div>
+
+<!-- importazione -->
+<div class="modal" id="impModal" hidden>
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-head">
+      <h2>Importa la biblioteca</h2>
+      <button class="x" id="impClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="imp-drop" id="impDrop">
+        <div class="e">📚</div>
+        <div class="t">Scegli il file JSON</div>
+        <div class="s">Quello esportato dalla vecchia biblioteca.<br>I libri già presenti non vengono duplicati.</div>
+      </div>
+      <input type="file" id="impFile" accept=".json,application/json" hidden>
+      <div class="prog" id="impProg">
+        <div class="track"><div class="fill" id="impFill"></div></div>
+        <div class="lbl" id="impLbl">…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="famiglia.js"></script>
+<script>
+var books = [], owners = [], viewMode = "grid";
+try { viewMode = localStorage.getItem("biblioView") || "grid"; } catch (e) { }
+
+$("top").innerHTML = toolHeader("La mia biblioteca", "");
+
+/* ---------- utilità ---------- */
+function arr(v) { return Array.isArray(v) ? v : (v ? [v] : []); }
+function authorsOf(b) { return arr(b.authors).join(", "); }
+function genresOf(b) { return arr(b.genre); }
+function ownersOf(b) { return arr(b.owners); }
+function readsOf(b) { return (b.reads && typeof b.reads === "object") ? b.reads : {}; }
+function ownerColor(name) {
+  var o = owners.find(function (x) { return x.name === name; });
+  return o ? o.color : "#8A7B5E";
+}
+/* Un colore chiaro vuole testo scuro, altrimenti non si legge. */
+function isLight(hex) {
+  if (!hex || hex[0] !== "#") return false;
+  var h = hex.slice(1);
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 165;
+}
+function hl(text, q) {
+  if (!q) return esc(text);
+  var i = String(text).toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return esc(text);
+  return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>" + esc(text.slice(i + q.length));
+}
+/* Altezza del dorso: proporzionale alle pagine, come su uno scaffale vero. */
+function spineH(b) {
+  var p = parseInt(b.pages) || 0;
+  return Math.max(96, Math.min(168, 96 + Math.round(p / 2.6)));
+}
+
+/* ---------- filtri ---------- */
+function rows() {
+  var q = $("q").value.trim().toLowerCase();
+  var fo = $("fOwner").value, fg = $("fGenre").value, fa = $("fAge").value, fs = $("fState").value;
+  return books.filter(function (b) {
+    if (fo && ownersOf(b).indexOf(fo) < 0) return false;
+    if (fg && genresOf(b).indexOf(fg) < 0) return false;
+    if (fa && (b.age || "") !== fa) return false;
+    if (fs === "lent" && !b.lent) return false;
+    if (fs === "sold" && !b.sold) return false;
+    if (fs === "gift" && !b.to_gift) return false;
+    if (fs === "buy" && !b.to_buy) return false;
+    if (!q) return true;
+    return (b.title || "").toLowerCase().indexOf(q) >= 0
+      || authorsOf(b).toLowerCase().indexOf(q) >= 0
+      || (b.publisher || "").toLowerCase().indexOf(q) >= 0
+      || (b.series || "").toLowerCase().indexOf(q) >= 0
+      || (b.isbn || "").indexOf(q) >= 0;
+  }).sort(function (a, b) {
+    return (a.title || "").toLowerCase() < (b.title || "").toLowerCase() ? -1 : 1;
+  });
+}
+
+/* ---------- disegno ---------- */
+function render() {
+  var q = $("q").value.trim();
+  $("sWrap").className = "search" + (q ? " has" : "");
+  var list = rows();
+  var filtered = q || $("fOwner").value || $("fGenre").value || $("fAge").value || $("fState").value;
+  $("cnt").innerHTML = filtered ? ("<b>" + list.length + "</b> di " + books.length)
+    : (books.length ? ("<b>" + books.length + "</b> libri") : "");
+  $("hdrSub").textContent = books.length ? (books.length + (books.length === 1 ? " libro" : " libri")) : "";
+  $("vShelf").classList.toggle("on", viewMode === "shelf");
+  $("vGrid").classList.toggle("on", viewMode === "grid");
+  $("vList").classList.toggle("on", viewMode === "list");
+
+  var host = $("host");
+  if (!books.length) {
+    host.innerHTML = '<div class="empty"><div class="emo">📚</div><h3>La biblioteca è vuota</h3>'
+      + '<p>Importa il file JSON della vecchia biblioteca per portare dentro tutti i libri.</p>'
+      + '<button class="btn" onclick="document.getElementById(\'impBtn\').click()">📥 Importa</button></div>';
+    return;
+  }
+  if (!list.length) {
+    host.innerHTML = '<div class="empty"><div class="emo">🔍</div><h3>Nessun risultato</h3>'
+      + '<p>Nessun libro corrisponde ai filtri attivi.</p></div>';
+    return;
+  }
+
+  if (viewMode === "shelf") {
+    host.innerHTML = '<div class="shelf">' + list.map(function (b) {
+      var c = b.spine_color || "#8A7B5E";
+      var mk = b.lent ? "📕" : (b.sold ? "💰" : (b.to_gift ? "🎁" : ""));
+      return '<div class="spine' + (isLight(c) ? " dark" : "") + '" data-id="' + b.id + '"'
+        + ' style="background:' + esc(c) + ';height:' + spineH(b) + 'px" title="' + esc(b.title || "") + '">'
+        + (mk ? '<span class="mk">' + mk + '</span>' : '')
+        + '<span>' + esc((b.title || "").slice(0, 34)) + '</span></div>';
+    }).join("") + '</div>';
+  } else if (viewMode === "list") {
+    host.innerHTML = '<div class="tbl">' + list.map(function (b) {
+      var th = b.photo ? '<span class="th"><img src="' + esc(b.photo) + '" alt="" loading="lazy"></span>'
+        : '<span class="th" style="background:' + esc(b.spine_color || "#8A7B5E") + '"></span>';
+      var sub = [authorsOf(b), b.publisher, b.age].filter(Boolean).join(" · ");
+      var tg = (b.lent ? "📕" : "") + (b.sold ? "💰" : "") + (b.to_gift ? "🎁" : "");
+      return '<div class="trow" data-id="' + b.id + '">' + th
+        + '<div><div class="tt">' + hl(b.title || "Senza titolo", q) + '</div>'
+        + '<div class="ts">' + esc(sub) + '</div></div>'
+        + '<div class="tg">' + tg + '</div></div>';
+    }).join("") + '</div>';
+  } else {
+    host.className = "grid";
+    host.innerHTML = list.map(function (b) {
+      var cov = b.photo ? '<img src="' + esc(b.photo) + '" alt="" loading="lazy">'
+        : '<span class="ph">📕</span>';
+      var fl = b.lent ? "📕" : (b.sold ? "💰" : (b.to_gift ? "🎁" : ""));
+      return '<div class="bcard" data-id="' + b.id + '"><div class="cov">' + cov
+        + (fl ? '<span class="flag">' + fl + '</span>' : '') + '</div>'
+        + '<div class="nfo"><div class="t">' + hl(b.title || "Senza titolo", q) + '</div>'
+        + '<div class="a">' + esc(authorsOf(b) || "—") + '</div></div></div>';
+    }).join("");
+    host.querySelectorAll(".bcard").forEach(bind);
+    return;
+  }
+  host.className = "";
+  host.querySelectorAll("[data-id]").forEach(bind);
+}
+function bind(el) {
+  el.addEventListener("click", function () { openBook(el.getAttribute("data-id")); });
+}
+
+/* ---------- scheda libro ---------- */
+var viewingId = null;
+function openBook(id) {
+  var b = books.find(function (x) { return x.id === id; });
+  if (!b) return;
+  viewingId = id;
+  $("bvTitle").textContent = b.title || "Libro";
+  var cov = b.photo ? '<img src="' + esc(b.photo) + '" alt="">' : '<div class="ph">📕</div>';
+
+  var chips = "";
+  if (b.age) chips += '<span class="chip">👶 ' + esc(b.age) + "</span>";
+  if (b.pages) chips += '<span class="chip">📄 ' + esc(b.pages) + " pag.</span>";
+  if (b.condition) chips += '<span class="chip">✨ ' + esc(b.condition) + "</span>";
+  if (b.lent) chips += '<span class="chip hi">📕 In prestito' + (b.lent_to ? " a " + esc(b.lent_to) : "") + "</span>";
+  if (b.sold) chips += '<span class="chip hi">💰 Venduto</span>';
+  if (b.to_gift) chips += '<span class="chip hi">🎁 Da regalare</span>';
+  if (b.to_buy) chips += '<span class="chip hi">🛒 Da comprare</span>';
+
+  var rd = readsOf(b);
+  var readers = owners.map(function (o) {
+    var on = !!rd[o.name];
+    return '<button class="rd' + (on ? " on" : "") + '" data-rd="' + esc(o.name) + '"'
+      + (on ? ' style="background:' + esc(o.color) + '"' : '') + '>'
+      + '<span class="dot" style="background:' + esc(o.color) + '"></span>' + esc(o.name)
+      + (on ? " ✓" : "") + "</button>";
+  }).join("");
+
+  var rws = "";
+  function row(k, v) { if (v) rws += '<div class="row"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>"; }
+  row("Editore", esc([b.publisher, b.year].filter(Boolean).join(", ")));
+  row("Collana", esc(b.series));
+  row("Genere", genresOf(b).map(function (g) { return '<span class="chip">' + esc(g) + "</span>"; }).join(" "));
+  row("Di chi è", ownersOf(b).map(function (o) {
+    return '<span class="chip" style="background:' + esc(ownerColor(o)) + '22">' + esc(o) + "</span>";
+  }).join(" "));
+  row("Letto da", '<div class="readers">' + readers + "</div>");
+  var pr = [];
+  if (b.price) pr.push("acquisto " + esc(b.price) + " €");
+  if (b.sale_price) pr.push("rivendita " + esc(b.sale_price) + " €");
+  if (b.sold && b.sold_price) pr.push("venduto a " + esc(b.sold_price) + " €");
+  row("Prezzo", pr.join(" · "));
+  row("ISBN", esc(b.isbn));
+  row("Note", esc(b.notes).replace(/\n/g, "<br>"));
+
+  $("bvBody").innerHTML = '<div class="bv"><div class="cov">' + cov + "</div>"
+    + '<div><h3>' + esc(b.title || "Senza titolo") + "</h3>"
+    + (b.subtitle ? '<div class="sub">' + esc(b.subtitle) + "</div>" : "")
+    + (authorsOf(b) ? '<div class="by">' + esc(authorsOf(b)) + "</div>" : "")
+    + '<div class="chips">' + chips + "</div>"
+    + '<div class="rows">' + rws + "</div></div></div>";
+
+  /* segnare chi l'ha letto */
+  $("bvBody").querySelectorAll("[data-rd]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var who = btn.getAttribute("data-rd");
+      var r = readsOf(b);
+      if (r[who]) delete r[who]; else r[who] = new Date().toISOString().slice(0, 10);
+      b.reads = r;
+      guard(sb.from("books").update({ reads: r }).eq("id", b.id), "reads").then(function () {
+        openBook(b.id);
+        toast(r[who] ? who + " ha letto questo libro" : "Segno tolto");
+      });
+    });
+  });
+
+  $("bvModal").hidden = false;
+}
+$("bvClose").addEventListener("click", function () { $("bvModal").hidden = true; });
+$("bvModal").addEventListener("click", function (e) { if (e.target === $("bvModal")) $("bvModal").hidden = true; });
+
+/* ---------- importazione ---------- */
+$("impBtn").addEventListener("click", function () { $("impModal").hidden = false; });
+$("impClose").addEventListener("click", function () { $("impModal").hidden = true; });
+$("impDrop").addEventListener("click", function () { $("impFile").click(); });
+$("impFile").addEventListener("change", function () {
+  var f = this.files && this.files[0];
+  if (f) importJson(f);
+  this.value = "";
+});
+
+/* Traduce un libro del vecchio formato nel formato del database. */
+function mapBook(o) {
+  return {
+    legacy_id: o.id || null,
+    title: (o.title || "Senza titolo").trim(),
+    subtitle: o.subtitle || null,
+    authors: arr(o.authors),
+    publisher: o.publisher || null,
+    year: o.year ? String(o.year) : null,
+    series: o.series || null,
+    isbn: o.isbn || null,
+    genre: arr(o.genre),
+    pages: o.pages ? String(o.pages) : null,
+    age: o.age || null,
+    condition: o.condition || null,
+    price: o.price ? String(o.price) : null,
+    sale_price: o.salePrice ? String(o.salePrice) : null,
+    sold_price: o.soldPrice ? String(o.soldPrice) : null,
+    spine_color: o.spineColor || null,
+    photo: o.photo || null,
+    notes: o.notes || null,
+    owners: arr(o.owners),
+    reads: (o.reads && typeof o.reads === "object") ? o.reads : {},
+    lent: !!o.lent,
+    lent_to: o.lentTo || null,
+    lent_date: o.lentDate ? String(o.lentDate) : null,
+    sold: !!o.sold,
+    sold_date: o.soldDate ? String(o.soldDate) : null,
+    to_gift: !!o.toGift,
+    to_buy: !!o.toBuy,
+    extra: o.custom && Object.keys(o.custom).length ? o.custom : {}
+  };
+}
+
+function importJson(file) {
+  var pr = $("impProg"), fill = $("impFill"), lbl = $("impLbl");
+  pr.classList.add("on");
+  fill.style.width = "2%";
+  lbl.textContent = "Leggo il file…";
+
+  var fr = new FileReader();
+  fr.onload = function () {
+    var data;
+    try { data = JSON.parse(fr.result); }
+    catch (e) { lbl.textContent = "File non leggibile: non è un JSON valido."; return; }
+
+    var raw = Array.isArray(data) ? data : (data.books || []);
+    if (!raw.length) { lbl.textContent = "Nessun libro trovato nel file."; return; }
+
+    /* proprietari e sconti: li conservo nelle impostazioni */
+    var saves = [];
+    if (data.owners && data.owners.length) {
+      saves.push(sb.from("settings").upsert({ key: "owners", value: data.owners }));
+    }
+    if (data.discounts) {
+      saves.push(sb.from("settings").upsert({ key: "discounts", value: data.discounts }));
+    }
+
+    var mapped = raw.map(mapBook);
+    /* Le foto sono pesanti: carico a piccoli gruppi per non far cadere la
+       connessione dal telefono. */
+    var CHUNK = 8, done = 0, added = 0, failed = 0;
+
+    function step(i) {
+      if (i >= mapped.length) {
+        fill.style.width = "100%";
+        lbl.innerHTML = "<b>" + added + "</b> libri importati"
+          + (failed ? " · " + failed + " non riusciti" : "") + ".";
+        Promise.all(saves).then(loadAll);
+        setTimeout(function () { $("impModal").hidden = true; pr.classList.remove("on"); }, 1800);
+        return;
+      }
+      var slice = mapped.slice(i, i + CHUNK);
+      /* onConflict su legacy_id: reimportare lo stesso file non crea doppioni,
+         aggiorna e basta. */
+      sb.from("books").upsert(slice, { onConflict: "legacy_id" }).then(function (r) {
+        if (r.error) { failed += slice.length; console.error(r.error); }
+        else added += slice.length;
+        done += slice.length;
+        fill.style.width = Math.round(done / mapped.length * 100) + "%";
+        lbl.textContent = done + " di " + mapped.length + " libri…";
+        step(i + CHUNK);
+      });
+    }
+    lbl.textContent = "Carico " + mapped.length + " libri…";
+    step(0);
+  };
+  fr.onerror = function () { lbl.textContent = "Non riesco a leggere il file."; };
+  fr.readAsText(file);
+}
+
+/* ---------- filtri, viste ---------- */
+function fillFilters() {
+  var gs = {}, ags = {};
+  books.forEach(function (b) {
+    genresOf(b).forEach(function (g) { gs[g] = (gs[g] || 0) + 1; });
+    if (b.age) ags[b.age] = 1;
+  });
+  $("fOwner").innerHTML = '<option value="">Tutti</option>'
+    + owners.map(function (o) { return '<option value="' + esc(o.name) + '">' + esc(o.name) + "</option>"; }).join("");
+  $("fGenre").innerHTML = '<option value="">Tutti i generi</option>'
+    + Object.keys(gs).sort().map(function (g) { return '<option value="' + esc(g) + '">' + esc(g) + " (" + gs[g] + ")</option>"; }).join("");
+  $("fAge").innerHTML = '<option value="">Tutte le età</option>'
+    + Object.keys(ags).sort().map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("");
+}
+["q", "fOwner", "fGenre", "fAge", "fState"].forEach(function (id) {
+  $(id).addEventListener(id === "q" ? "input" : "change", render);
+});
+$("qClr").addEventListener("click", function () { $("q").value = ""; render(); $("q").focus(); });
+function setView(m) { viewMode = m; try { localStorage.setItem("biblioView", m); } catch (e) { } render(); }
+$("vShelf").addEventListener("click", function () { setView("shelf"); });
+$("vGrid").addEventListener("click", function () { setView("grid"); });
+$("vList").addEventListener("click", function () { setView("list"); });
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    if (!$("impModal").hidden) $("impModal").hidden = true;
+    else if (!$("bvModal").hidden) $("bvModal").hidden = true;
+  }
+});
+
+/* ---------- caricamento ---------- */
+function loadAll() {
+  setStatus("", "Carico…");
+  /* Le copertine pesano: le prendo a pagine per non bloccare tutto. */
+  var PAGE = 200, all = [], from = 0;
+  function page() {
+    return sb.from("books").select("*").order("title").range(from, from + PAGE - 1)
+      .then(function (r) {
+        if (r.error) throw r.error;
+        all = all.concat(r.data);
+        if (r.data.length === PAGE) { from += PAGE; return page(); }
+      });
+  }
+  return page().then(function () {
+    books = all;
+    return sb.from("settings").select("*").eq("key", "owners").maybeSingle();
+  }).then(function (r) {
+    owners = (r && r.data && Array.isArray(r.data.value)) ? r.data.value : [];
+    /* se non ci sono proprietari salvati, li deduco dai libri */
+    if (!owners.length) {
+      var set = {};
+      books.forEach(function (b) { ownersOf(b).forEach(function (o) { set[o] = 1; }); });
+      owners = Object.keys(set).sort().map(function (n) { return { name: n, color: "#8A7B5E" }; });
+    }
+    fillFilters();
+    render();
+    setStatus("ok", books.length ? ("<b>" + books.length + "</b> libri in biblioteca") : "Biblioteca vuota");
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("warn", "Errore di caricamento");
+    $("host").innerHTML = '<div class="empty"><div class="emo">⚠️</div><h3>Non riesco a caricare</h3>'
+      + "<p>" + esc(e.message || "Errore di connessione") + "</p></div>";
+  });
+}
+
+requireAuth().then(loadAll);
+</script>
+</body>
+</html>
