@@ -223,15 +223,18 @@ function doLogin() {
     btn.disabled = false; btn.textContent = "Entra";
     if (r.error) {
       var m = r.error.message || "";
+      console.error("Login fallito:", r.error);
       if (/invalid login/i.test(m)) showErr("Email o password non corrette.");
       else if (/not confirmed/i.test(m)) showErr("Accesso non ancora confermato. Controlla la posta.");
+      else if (/api key|apikey|jwt/i.test(m)) showErr("Chiave non valida: " + m);
       else showErr("Accesso non riuscito: " + m);
       return;
     }
     enterPortal(r.data.user);
-  }).catch(function () {
+  }).catch(function (err) {
     btn.disabled = false; btn.textContent = "Entra";
-    showErr("Connessione non riuscita. Controlla la rete.");
+    console.error("Errore di rete:", err);
+    showErr("Connessione non riuscita: " + (err && err.message ? err.message : "rete non raggiungibile"));
   });
 }
 $("gateBtn").addEventListener("click", doLogin);

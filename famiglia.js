@@ -4,10 +4,46 @@
    ===================================================================== */
 
 var SUPABASE_URL = "https://tqqoxvfbstgcwbututfl.supabase.co";
+
+/* La chiave. Vanno bene entrambi i tipi:
+   - legacy "anon"  → inizia con  eyJ...            (consigliata: nessun intoppo)
+   - nuova publishable → inizia con sb_publishable_ (gestita qui sotto)
+
+   Le chiavi nuove non sono JWT e Supabase le rifiuta se arrivano
+   nell'intestazione "Authorization: Bearer". La libreria però le mette
+   proprio lì finché non si è fatto l'accesso, e il login fallisce.
+   Il correttivo qui sotto toglie quell'intestazione quando non serve. */
 var SUPABASE_KEY = "sb_publishable_yxM_xFHwyHO_dmIWxKNs2g_qEzqdvPf";
 
+var KEY_IS_JWT = /^ey/.test(SUPABASE_KEY);
+
+/* Correttivo per le chiavi publishable: intercetta le chiamate e rimuove
+   l'intestazione Authorization quando contiene la chiave anziché un JWT
+   di sessione. Con le chiavi legacy non viene applicato nulla. */
+var rawFetch = window.fetch.bind(window);
+function patchedFetch(input, init) {
+  try {
+    var url = typeof input === "string" ? input : (input && input.url) || "";
+    if (url.indexOf(SUPABASE_URL) === 0) {
+      var h = new Headers((init && init.headers) || (input && input.headers) || {});
+      var auth = h.get("Authorization") || "";
+      /* Un JWT di sessione ha tre parti separate da punto e inizia per "ey".
+         Se al posto suo c'è la chiave publishable, l'intestazione va tolta. */
+      if (auth && auth.indexOf("Bearer sb_") === 0) {
+        h.delete("Authorization");
+        init = Object.assign({}, init, { headers: h });
+        if (typeof input !== "string") {
+          input = new Request(input, { headers: h });
+        }
+      }
+    }
+  } catch (e) { /* in caso di dubbio si prosegue senza toccare nulla */ }
+  return rawFetch(input, init);
+}
+
 var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
+  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage },
+  global: KEY_IS_JWT ? {} : { fetch: patchedFetch }
 });
 
 /* ---------- utilità ---------- */
