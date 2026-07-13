@@ -2,7 +2,7 @@
 # Il piano gratuito mette in pausa i progetti dopo 7 giorni senza traffico:
 # questa azione fa una chiamata banale ogni 3 giorni, così non succede mai.
 name: Supabase keep-alive
-
+ 
 on:
   schedule:
     - cron: "0 6 */3 * *"   # ogni 3 giorni alle 06:00 UTC
