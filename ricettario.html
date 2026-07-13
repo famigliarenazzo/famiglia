@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Il nostro ricettario · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#1C3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* ---------- schede ---------- */
+  .tabs { display: flex; gap: 7px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 12px;
+    font-weight: 700; font-size: 14px; border: 1px solid var(--forest-line);
+    color: var(--paper-soft); transition: .13s;
+  }
+  html[data-theme="light"] .tab { border-color: var(--paper-edge); color: var(--ink-soft); }
+  .tab:hover { border-color: var(--brass); }
+  .tab.on { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .tab .n {
+    font-size: 11px; background: rgba(0, 0, 0, .18); border-radius: 99px; padding: 2px 7px;
+  }
+  .tab.on .n { background: rgba(0, 0, 0, .16); }
+  .page[hidden] { display: none !important; }
+
+  /* ---------- barra ---------- */
+  .bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .search { position: relative; flex: 1; min-width: 180px; }
+  .search input {
+    width: 100%; padding: 11px 38px 11px 40px; border-radius: 12px;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .search input { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .search input::placeholder { color: color-mix(in srgb, var(--paper-soft) 60%, transparent); }
+  .search input:focus { outline: none; border-color: var(--brass); }
+  .search .mag { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--brass); }
+  .search .clr {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px;
+    border-radius: 8px; display: none; align-items: center; justify-content: center; color: var(--paper-soft);
+  }
+  .search.has .clr { display: flex; }
+  .fsel {
+    padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; max-width: 160px;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .fsel { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .fsel:focus { outline: none; border-color: var(--brass); }
+  .vtoggle { display: flex; border: 1px solid var(--forest-line); border-radius: 11px; overflow: hidden; }
+  html[data-theme="light"] .vtoggle { border-color: var(--paper-edge); }
+  .vtoggle button { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: var(--paper-soft); transition: .13s; }
+  html[data-theme="light"] .vtoggle button { color: var(--ink-soft); }
+  .vtoggle button.on { background: var(--brass); color: var(--forest-deep); }
+  .vtoggle svg { width: 17px; height: 17px; }
+  .count { font-size: 12.5px; color: var(--paper-soft); white-space: nowrap; }
+  html[data-theme="light"] .count { color: var(--ink-soft); }
+  .count b { color: var(--brass); }
+
+  /* ---------- ricette ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 15px; }
+  .rc { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 15px; overflow: hidden; cursor: pointer; transition: .15s; box-shadow: 0 3px 16px var(--shadow); }
+  .rc:hover { transform: translateY(-4px); box-shadow: 0 13px 30px var(--shadow); border-color: var(--brass); }
+  .rc .ph { aspect-ratio: 4/3; background: linear-gradient(135deg, color-mix(in srgb, var(--brass) 20%, var(--paper)), var(--paper-soft)); position: relative; display: flex; align-items: center; justify-content: center; }
+  .rc .ph img { width: 100%; height: 100%; object-fit: cover; }
+  .rc .ph .nop { width: 42px; height: 42px; color: var(--brass); opacity: .5; }
+  .rc .fav { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(12, 22, 17, .45); backdrop-filter: blur(3px); color: #fff; z-index: 2; }
+  .rc .fav.on { color: #FFCE54; }
+  .rc .fav svg { width: 17px; height: 17px; }
+  .rc .tags { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 4px; }
+  .rc .tags span { font-size: 13px; background: rgba(12, 22, 17, .5); backdrop-filter: blur(3px); border-radius: 99px; padding: 4px 7px; }
+  .rc .nm { padding: 12px 14px 14px; font-family: var(--disp); font-weight: 600; font-size: 15.5px; line-height: 1.25; color: var(--ink); }
+  .rc mark { background: var(--brass-bright); color: var(--forest-deep); border-radius: 3px; padding: 0 2px; }
+
+  .tbl { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r); overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+  .trow { display: grid; grid-template-columns: 54px 1fr; gap: 12px; align-items: center; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--paper-edge); }
+  .trow:last-child { border-bottom: none; }
+  .trow:hover { background: var(--paper-soft); }
+  .trow .th { width: 54px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; }
+  .trow .th img { width: 100%; height: 100%; object-fit: cover; }
+  .trow .th svg { width: 20px; height: 20px; color: var(--brass); opacity: .6; }
+  .trow .tn { font-family: var(--disp); font-weight: 600; font-size: 15px; color: var(--ink); }
+  .trow .ts { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .trow mark { background: var(--brass-bright); color: var(--forest-deep); border-radius: 3px; padding: 0 2px; }
+
+  /* ---------- scheda ricetta ---------- */
+  .rv-ph { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; margin-bottom: 16px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 6px 12px; }
+  .sec-h { font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--ink); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .sec-h::after { content: ""; flex: 1; height: 1px; background: var(--paper-edge); }
+  .scaler { background: var(--paper-soft); border-radius: 13px; padding: 14px 16px; }
+  .serv { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+  .serv .lb { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); flex: 1; }
+  .serv button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--paper-edge); background: var(--paper); color: var(--ink); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .serv button:hover { border-color: var(--brass); color: var(--rust); }
+  .serv .v { font-family: var(--disp); font-weight: 600; font-size: 18px; min-width: 26px; text-align: center; color: var(--ink); }
+  .ing { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--paper-edge) 50%, transparent); }
+  .ing:last-of-type { border-bottom: none; }
+  .ing .nm { flex: 1; font-size: 14.5px; color: var(--ink); cursor: pointer; }
+  .ing.done .nm { opacity: .4; text-decoration: line-through; }
+  .ing input { width: 62px; padding: 6px 8px; border: 1px solid var(--paper-edge); border-radius: 8px; background: var(--paper); color: var(--ink); text-align: right; font-weight: 600; }
+  .ing input:focus { outline: none; border-color: var(--brass); }
+  .ing .u { font-size: 12.5px; color: var(--ink-soft); min-width: 52px; }
+  .note { font-size: 12px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
+  .proc { font-size: 14.5px; line-height: 1.75; color: var(--ink); white-space: pre-wrap; }
+  .rv-foot { display: flex; gap: 8px; padding: 15px 24px; border-top: 1px solid var(--paper-edge); background: var(--paper); border-radius: 0 0 20px 20px; }
+  .rv-foot .btn-ghost { flex: 1; justify-content: center; }
+  .rv-foot .sq { flex: 0 0 42px; padding: 11px 0; justify-content: center; }
+
+  /* ---------- modulo ricetta ---------- */
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .f3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .ph-box { aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; cursor: pointer; background: var(--paper-soft); border: 2px dashed var(--paper-edge); display: flex; align-items: center; justify-content: center; margin-bottom: 15px; transition: .14s; }
+  .ph-box:hover { border-color: var(--brass); }
+  .ph-box img { width: 100%; height: 100%; object-fit: cover; }
+  .ph-box .p { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .ph-box .p .e { font-size: 26px; opacity: .4; }
+  .ph-box .p .s { font-size: 12px; }
+  .irow { display: grid; grid-template-columns: 1fr 74px 108px 34px; gap: 7px; margin-bottom: 7px; align-items: center; }
+  .irow input, .irow select { padding: 9px 10px; border: 1px solid var(--paper-edge); border-radius: 9px; background: #FBF7EE; color: var(--ink); width: 100%; }
+  .irow input:focus, .irow select:focus { outline: none; border-color: var(--brass); }
+  .irow .rm { width: 34px; height: 34px; border-radius: 9px; color: var(--ink-soft); display: flex; align-items: center; justify-content: center; }
+  .irow .rm:hover { background: var(--rust); color: #fff; }
+  @media (max-width: 560px) { .irow { grid-template-columns: 1fr 60px 82px 30px; } .f3 { grid-template-columns: 1fr 1fr; } }
+
+  /* ---------- menù ---------- */
+  .mday { border: 1px solid var(--paper-edge); border-radius: 13px; margin-bottom: 11px; overflow: hidden; background: var(--paper); }
+  .mday-h { font-family: var(--disp); font-weight: 600; font-size: 15.5px; padding: 9px 14px; background: var(--paper-soft); color: var(--ink); display: flex; align-items: center; gap: 8px; }
+  .mday-h .today { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; background: var(--brass); color: var(--forest-deep); padding: 2px 8px; border-radius: 99px; }
+  .mslot { display: flex; gap: 10px; align-items: flex-start; padding: 8px 14px; border-top: 1px solid var(--paper-edge); }
+  .mslot .lb { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); width: 60px; flex-shrink: 0; padding-top: 8px; }
+  .mchips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; align-items: center; }
+  .mchip { display: inline-flex; align-items: center; gap: 5px; background: var(--paper-soft); border: 1px solid var(--paper-edge); border-radius: 99px; padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 600; color: var(--ink); }
+  .mchip .n { cursor: pointer; }
+  .mchip .n:hover { color: var(--rust); }
+  .mchip .x { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-soft); }
+  .mchip .x:hover { background: var(--rust); color: #fff; }
+  .madd { width: 30px; height: 30px; border-radius: 99px; border: 1px dashed var(--paper-edge); color: var(--rust); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .madd:hover { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 12%, transparent); }
+
+  .pick-row { display: grid; grid-template-columns: 44px 1fr; gap: 11px; align-items: center; padding: 8px 10px; border-radius: 11px; cursor: pointer; }
+  .pick-row:hover { background: var(--paper-soft); }
+  .pick-row .th { width: 44px; height: 38px; border-radius: 8px; overflow: hidden; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; }
+  .pick-row .th img { width: 100%; height: 100%; object-fit: cover; }
+  .pick-row .th svg { width: 18px; height: 18px; color: var(--brass); opacity: .6; }
+  .pick-row .n { font-weight: 600; font-size: 14.5px; color: var(--ink); }
+  .pick-row .s { font-size: 11.5px; color: var(--ink-soft); }
+
+  /* ---------- lista spesa ---------- */
+  .sp-top { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+  .sp-add { display: grid; grid-template-columns: 1fr 78px 40px; gap: 8px; margin-bottom: 16px; }
+  .sp-add input { padding: 11px 13px; border: 1px solid var(--forest-line); border-radius: 11px; background: color-mix(in srgb, var(--forest-deep) 55%, transparent); color: var(--paper); }
+  html[data-theme="light"] .sp-add input { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .sp-add input:focus { outline: none; border-color: var(--brass); }
+  .sp-add button { border-radius: 11px; background: var(--brass); color: var(--forest-deep); font-size: 19px; font-weight: 700; }
+  .sp-list { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r); padding: 6px 16px 14px; box-shadow: 0 4px 20px var(--shadow); }
+  .sp-h { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin: 13px 0 4px; }
+  .srow { display: grid; grid-template-columns: 26px 1fr 70px 60px 26px; gap: 7px; align-items: center; padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--paper-edge) 50%, transparent); }
+  .srow:last-child { border-bottom: none; }
+  .sck { width: 23px; height: 23px; border-radius: 7px; border: 2px solid var(--paper-edge); display: flex; align-items: center; justify-content: center; font-size: 13px; color: transparent; }
+  .sck:hover { border-color: var(--brass); }
+  .srow.done .sck { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .srow input { padding: 7px 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); width: 100%; font-size: 14px; }
+  .srow input:hover { border-color: var(--paper-edge); }
+  .srow input:focus { outline: none; border-color: var(--brass); background: #FBF7EE; }
+  .srow.done input { opacity: .42; text-decoration: line-through; }
+  .srow .u { font-size: 12.5px; color: var(--ink-soft); }
+  .srow .x { width: 25px; height: 25px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); font-size: 12px; }
+  .srow .x:hover { background: var(--rust); color: #fff; }
+  .srow .src { font-size: 11px; }
+
+  /* ---------- catalogo ---------- */
+  .month-bar { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; }
+  .month-bar button {
+    padding: 8px 13px; border-radius: 99px; font-size: 12.5px; font-weight: 700; white-space: nowrap;
+    border: 1px solid var(--forest-line); color: var(--paper-soft); flex-shrink: 0;
+  }
+  html[data-theme="light"] .month-bar button { border-color: var(--paper-edge); color: var(--ink-soft); }
+  .month-bar button.on { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .cat { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 13px; margin-bottom: 10px; overflow: hidden; }
+  .cat-h { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; color: var(--ink); }
+  .cat-h:hover { background: var(--paper-soft); }
+  .cat-h .ic { font-size: 19px; }
+  .cat-h .n { font-family: var(--disp); font-weight: 600; font-size: 15.5px; flex: 1; }
+  .cat-h .c { font-size: 11.5px; font-weight: 700; background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 3px 9px; }
+  .cat-h .ch { color: var(--ink-soft); transition: .18s; }
+  .cat.open .cat-h .ch { transform: rotate(180deg); }
+  .cat-b { display: none; padding: 4px 15px 15px; }
+  .cat.open .cat-b { display: block; }
+  .prods { display: flex; flex-wrap: wrap; gap: 7px; }
+  .prod {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 99px;
+    border: 1.5px solid var(--paper-edge); font-size: 13px; font-weight: 600; color: var(--ink);
+    transition: .12s; cursor: pointer;
+  }
+  .prod:hover { border-color: var(--brass); background: var(--paper-soft); }
+  .prod.in { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .prod.off { opacity: .3; }
+  .prod .ed { font-size: 11px; opacity: .5; padding-left: 2px; }
+  .prod .ed:hover { opacity: 1; }
+  .season-note { font-size: 12px; color: var(--ink-soft); margin-bottom: 9px; }
+  .mchk { display: flex; flex-wrap: wrap; gap: 5px; }
+  .mchk button {
+    padding: 7px 11px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
+    border: 1.5px solid var(--paper-edge); color: var(--ink-soft);
+  }
+  .mchk button.on { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .mchk-all { display: flex; gap: 7px; margin-top: 9px; }
+  .mchk-all button { font-size: 12px; padding: 6px 11px; border-radius: 9px; border: 1px solid var(--paper-edge); color: var(--ink-soft); }
+  .mchk-all button:hover { border-color: var(--brass); color: var(--rust); }
+
+  /* ---------- modalità cucina ---------- */
+  .cook { max-width: 640px; text-align: center; }
+  .cprog { display: flex; gap: 5px; padding: 18px 26px 0; }
+  .cprog span { flex: 1; height: 5px; border-radius: 99px; background: var(--paper-edge); transition: .2s; }
+  .cprog span.on { background: var(--brass); }
+  .clbl { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brass); margin: 22px 0 12px; }
+  .ctxt { font-family: var(--disp); font-size: clamp(20px, 4.4vw, 27px); font-weight: 500; line-height: 1.45; color: var(--ink); padding: 0 28px; min-height: 140px; display: flex; align-items: center; justify-content: center; }
+  .cnav { display: flex; gap: 10px; padding: 22px 26px 24px; }
+  .cnav button { flex: 1; padding: 15px; border-radius: 13px; font-weight: 700; font-size: 15.5px; }
+  .chint { font-size: 12px; color: var(--ink-soft); padding: 0 26px 6px; }
+</style>
+</head>
+<body>
+
+<div class="top" id="top"></div>
+
+<div class="wrap">
+  <div style="margin-bottom:14px"><span class="status" id="status"><span class="dot"></span><span>Carico…</span></span></div>
+
+  <div class="tabs">
+    <button class="tab on" id="tRic">🍲 Ricette <span class="n" id="nRic">0</span></button>
+    <button class="tab" id="tMen">📅 Menù <span class="n" id="nMen">0</span></button>
+    <button class="tab" id="tSpe">🛒 Spesa <span class="n" id="nSpe">0</span></button>
+    <button class="tab" id="tCat">📖 Catalogo</button>
+  </div>
+
+  <!-- ============ RICETTE ============ -->
+  <div class="page" id="pRic">
+    <div class="bar">
+      <div class="search" id="sW">
+        <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="q" placeholder="Cerca per nome o ingrediente…" autocomplete="off">
+        <button class="clr" id="qC">✕</button>
+      </div>
+      <select class="fsel" id="fPor"></select>
+      <select class="fsel" id="fSta"></select>
+      <button class="btn-ghost" id="fFav" title="Solo preferite">⭐</button>
+      <button class="btn-ghost" id="lucky" title="A sorpresa">🎲</button>
+      <div class="vtoggle">
+        <button id="vG" title="Card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
+        <button id="vL" title="Elenco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      </div>
+      <button class="btn" id="addBtn">＋ Ricetta</button>
+      <span class="count" id="cnt"></span>
+    </div>
+    <div id="host"><div class="loading"><div class="spin"></div>Carico…</div></div>
+  </div>
+
+  <!-- ============ MENÙ ============ -->
+  <div class="page" id="pMen" hidden>
+    <p style="font-size:13px;color:var(--paper-soft);margin-bottom:14px;line-height:1.5" id="menHint">
+      Assegna le ricette ai pasti della settimana, poi genera la lista della spesa con un tocco.
+    </p>
+    <div id="menBody"></div>
+    <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn-ghost" id="menClr">Svuota settimana</button>
+      <button class="btn" id="menShop">🛒 Genera lista spesa</button>
+    </div>
+  </div>
+
+  <!-- ============ SPESA ============ -->
+  <div class="page" id="pSpe" hidden>
+    <div class="sp-top">
+      <button class="btn-ghost" id="spGen">📅 Dal menù</button>
+      <button class="btn-ghost" id="spCat">📖 Dal catalogo</button>
+      <button class="btn-ghost" id="spShare">📤 Condividi</button>
+      <button class="btn-ghost" id="spDone">Togli i fatti</button>
+      <button class="btn-ghost" id="spAll" style="color:var(--rust)">Svuota</button>
+    </div>
+    <div class="sp-add">
+      <input type="text" id="spN" placeholder="Aggiungi a mano… (es. carta cucina)">
+      <input type="text" id="spQ" placeholder="Qtà" inputmode="decimal">
+      <button id="spAdd">+</button>
+    </div>
+    <div id="spBody"></div>
+  </div>
+
+  <!-- ============ CATALOGO ============ -->
+  <div class="page" id="pCat" hidden>
+    <div class="bar">
+      <div class="search" id="cW">
+        <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="text" id="cq" placeholder="Cerca un prodotto…" autocomplete="off">
+        <button class="clr" id="cqC">✕</button>
+      </div>
+      <button class="btn" id="prodAdd">＋ Prodotto</button>
+    </div>
+    <div class="month-bar" id="monthBar"></div>
+    <p style="font-size:12.5px;color:var(--paper-soft);margin-bottom:12px;line-height:1.5">
+      Tocca un prodotto per metterlo nella lista della spesa. La matita lo modifica.
+      Frutta e verdura fuori stagione restano sbiadite.
+    </p>
+    <div id="catBody"></div>
+  </div>
+</div>
+
+<!-- scheda ricetta -->
+<div class="modal" id="rvModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="rvT">Ricetta</h2><button class="x" id="rvX">✕</button></div>
+    <div class="sheet-body" id="rvB"></div>
+    <div class="rv-foot">
+      <button class="btn-ghost sq" id="rvFav" title="Preferita">☆</button>
+      <button class="btn-ghost" id="rvShare">📤 Condividi</button>
+      <button class="btn-ghost" id="rvCook">🍳 Cucina</button>
+      <button class="btn-ghost" id="rvEdit">✏️ Modifica</button>
+      <button class="btn-ghost sq" id="rvDel" style="color:var(--rust)" title="Elimina">🗑</button>
+    </div>
+  </div>
+</div>
+
+<!-- modulo ricetta -->
+<div class="modal" id="fModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head"><h2 id="fT">Aggiungi ricetta</h2><button class="x" id="fX">✕</button></div>
+    <div class="sheet-body">
+      <div class="ph-box" id="fPhBox">
+        <img id="fPhImg" alt="" hidden>
+        <div class="p" id="fPhP"><span class="e">📷</span><span class="s">Tocca per la foto</span></div>
+      </div>
+      <input type="file" id="fPh" accept="image/*" hidden>
+      <button class="btn-ghost" id="fPhDel" style="width:100%;margin-bottom:15px" hidden>Togli foto</button>
+
+      <div class="fld"><label>Nome *</label><input type="text" id="fN" placeholder="Es. Torta di mele della nonna"></div>
+      <div class="f2">
+        <div class="fld"><label>Portata</label><select id="fPo"></select></div>
+        <div class="fld"><label>Stagione</label><select id="fSt"></select></div>
+      </div>
+      <div class="f3">
+        <div class="fld"><label>Preparazione <span class="opt">· min</span></label><input type="text" id="fPr" inputmode="numeric"></div>
+        <div class="fld"><label>Cottura <span class="opt">· min</span></label><input type="text" id="fCo" inputmode="numeric"></div>
+        <div class="fld"><label>Porzioni</label><input type="text" id="fSe" inputmode="numeric"></div>
+      </div>
+
+      <div class="fld">
+        <label>Ingredienti</label>
+        <div id="fIng"></div>
+        <button class="btn-ghost" id="fIngAdd" style="margin-top:6px">＋ Ingrediente</button>
+      </div>
+
+      <div class="fld">
+        <label>Procedimento <span class="opt">· un passo per riga: diventano i passi della modalità cucina</span></label>
+        <textarea id="fPc" rows="6" placeholder="Mescola farina e zucchero&#10;Aggiungi le uova&#10;Inforna a 180° per 35 minuti"></textarea>
+      </div>
+      <div class="fld"><label>Note</label><textarea id="fNo" rows="2"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="fCanc">Annulla</button>
+      <button class="btn" id="fSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- scelta ricetta per il menù -->
+<div class="modal" id="pkModal" hidden>
+  <div class="sheet" style="max-width:470px">
+    <div class="sheet-head"><h2 id="pkT" style="font-size:19px">Scegli una ricetta</h2><button class="x" id="pkX">✕</button></div>
+    <div class="sheet-body">
+      <input type="text" id="pkQ" placeholder="Cerca…" autocomplete="off"
+        style="width:100%;padding:11px 14px;border:1px solid var(--paper-edge);border-radius:11px;background:#FBF7EE;color:var(--ink);margin-bottom:12px">
+      <div id="pkL"></div>
+    </div>
+  </div>
+</div>
+
+<!-- prodotto: aggiungi / modifica -->
+<div class="modal" id="prModal" hidden>
+  <div class="sheet" style="max-width:480px">
+    <div class="sheet-head"><h2 id="prT">Nuovo prodotto</h2><button class="x" id="prX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Nome *</label><input type="text" id="prN" placeholder="Es. Dragon fruit"></div>
+      <div class="fld"><label>Categoria *</label><select id="prC"></select></div>
+      <div class="fld" id="prMwrap">
+        <label>In quali mesi si trova <span class="opt">· lascia vuoto per «tutto l'anno»</span></label>
+        <div class="mchk" id="prM"></div>
+        <div class="mchk-all">
+          <button id="prMall">Tutto l'anno</button>
+          <button id="prMnone">Nessuno</button>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="prDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="prCanc">Annulla</button>
+        <button class="btn" id="prSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- modalità cucina -->
+<div class="modal" id="ckModal" hidden>
+  <div class="sheet cook">
+    <div class="sheet-head"><h2 id="ckT" style="font-size:19px">In cucina</h2><button class="x" id="ckX">✕</button></div>
+    <div class="cprog" id="ckP"></div>
+    <div class="clbl" id="ckL"></div>
+    <div class="ctxt" id="ckTx"></div>
+    <div class="chint" id="ckH"></div>
+    <div class="cnav">
+      <button class="btn-ghost" id="ckPrev">← Indietro</button>
+      <button class="btn" id="ckNext">Avanti →</button>
+    </div>
+  </div>
+</div>
+
+<!-- conferma eliminazione -->
+<div class="modal" id="dlModal" hidden>
+  <div class="sheet" style="max-width:390px">
+    <div class="sheet-body" style="text-align:center;padding:30px 26px">
+      <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+      <h3 style="font-family:var(--disp);font-size:19px;margin-bottom:8px;color:var(--ink)">Eliminare?</h3>
+      <p style="color:var(--ink-soft);font-size:14px;line-height:1.5" id="dlN"></p>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="dlNo">Annulla</button>
+      <button class="btn" id="dlYes" style="background:var(--rust);color:#fff">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="famiglia.js"></script>
+<script src="ricettario.js"></script>
+</body>
+</html>
