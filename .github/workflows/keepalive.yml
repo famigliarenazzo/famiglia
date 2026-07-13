@@ -1,29 +1,44 @@
 # Tiene sveglio il progetto Supabase.
 # Il piano gratuito mette in pausa i progetti dopo 7 giorni senza traffico:
-# questa azione fa una chiamata banale ogni 3 giorni, così non succede mai.
+# questa azione fa una chiamata banale ogni 3 giorni, cosi non succede mai.
 name: Supabase keep-alive
- 
-on:
+
+"on":
   schedule:
     - cron: "0 6 */3 * *"   # ogni 3 giorni alle 06:00 UTC
-  workflow_dispatch:         # avvio manuale dal pulsante su GitHub
+  workflow_dispatch:        # avvio manuale dal pulsante su GitHub
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
       - name: Sveglia il database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/categories?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}")
-          echo "Risposta: $CODE"
-          # 200 = sveglio. 401 = raggiunto ma senza permessi di lettura:
-          # va bene lo stesso, il progetto ha ricevuto traffico.
-          if [ "$CODE" = "200" ] || [ "$CODE" = "401" ]; then
-            echo "Progetto attivo."
-          else
-            echo "Attenzione: risposta inattesa."
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Mancano i secret SUPABASE_URL e/o SUPABASE_KEY."
+            echo "Vanno creati in Settings > Secrets and variables > Actions."
             exit 1
           fi
-
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "Risposta: $CODE"
+          case "$CODE" in
+            200|401)
+              # 200 = sveglio e leggibile.
+              # 401 = raggiunto ma senza permessi: va bene lo stesso,
+              #       il progetto ha ricevuto traffico e non va in pausa.
+              echo "Progetto attivo." ;;
+            404)
+              echo "Il database risponde ma la tabella non esiste: eseguire schema.sql."
+              exit 1 ;;
+            000)
+              echo "Nessuna risposta: URL errato o progetto in pausa."
+              exit 1 ;;
+            *)
+              echo "Risposta inattesa."
+              exit 1 ;;
+          esac
