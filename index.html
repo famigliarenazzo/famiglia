@@ -19,6 +19,9 @@
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
     padding: 24px; padding-top: calc(24px + env(safe-area-inset-top));
   }
+  /* Fondamentale: "hidden" da solo non basta contro display:flex.
+     Senza questa riga il riquadro di accesso resta visibile dopo il login. */
+  .gate[hidden], #portal[hidden] { display: none !important; }
   .gate-box { width: 100%; max-width: 390px; text-align: center; }
   .gate-mark {
     width: 84px; height: 84px; margin: 0 auto 22px; border-radius: 22px;
@@ -283,7 +286,15 @@ function loadStats() {
 }
 $("themeBtn").addEventListener("click", toggleTheme);
 $("outBtn").addEventListener("click", function () {
-  sb.auth.signOut().then(function () { location.reload(); });
+  sb.auth.signOut().then(function () {
+    currentUser = null;
+    $("portal").hidden = true;
+    $("gate").hidden = false;
+    $("gPass").value = "";
+    $("gateErr").classList.remove("on");
+    window.scrollTo(0, 0);
+    $("gEmail").focus();
+  });
 });
 
 /* ---------- avvio ---------- */

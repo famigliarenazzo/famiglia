@@ -161,6 +161,53 @@
     .row .k { width: auto; }
   }
 
+  /* ---------- modulo libro ---------- */
+  .fgrid { display: grid; grid-template-columns: 190px 1fr; gap: 22px; }
+  .cov-box {
+    aspect-ratio: 3/4; border-radius: 11px; overflow: hidden; cursor: pointer;
+    background: var(--paper-soft); border: 2px dashed var(--paper-edge);
+    display: flex; align-items: center; justify-content: center; transition: .14s;
+  }
+  .cov-box:hover { border-color: var(--brass); }
+  .cov-box img { width: 100%; height: 100%; object-fit: cover; }
+  .cov-ph { display: flex; flex-direction: column; align-items: center; gap: 7px; color: var(--ink-soft); }
+  .cov-ph span:first-child { font-size: 32px; opacity: .4; }
+  .cov-ph .s { font-size: 11.5px; text-align: center; padding: 0 12px; line-height: 1.4; }
+  .spine-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .spine-pick button {
+    width: 26px; height: 26px; border-radius: 7px; border: 2px solid transparent; transition: .12s;
+  }
+  .spine-pick button:hover { transform: scale(1.15); }
+  .spine-pick button.on { border-color: var(--ink); transform: scale(1.15); }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .f3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .tagbox { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 99px;
+    border: 1.5px solid var(--paper-edge); color: var(--ink-soft); transition: .12s; cursor: pointer;
+  }
+  .tag:hover { border-color: var(--brass); }
+  .tag.on { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .tag.own.on { color: #fff; border-color: transparent; }
+  .flags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .fl {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 11px;
+    border: 1.5px solid var(--paper-edge); font-size: 13px; font-weight: 600;
+    color: var(--ink-soft); cursor: pointer; transition: .12s;
+  }
+  .fl:hover { border-color: var(--brass); }
+  .fl input { accent-color: var(--brass); }
+  .fl:has(input:checked) { background: color-mix(in srgb, var(--brass) 20%, transparent); border-color: var(--brass); color: var(--ink); }
+  .flags input[type="text"] {
+    padding: 8px 12px; border: 1px solid var(--paper-edge); border-radius: 10px;
+    background: #FBF7EE; color: var(--ink); width: 130px;
+  }
+  @media (max-width: 620px) {
+    .fgrid { grid-template-columns: 1fr; }
+    .fcov { max-width: 180px; margin: 0 auto; }
+    .f3 { grid-template-columns: 1fr 1fr; }
+  }
+
   /* ---------- importazione ---------- */
   .imp-drop {
     border: 2px dashed var(--paper-edge); border-radius: 14px; padding: 30px 20px;
@@ -206,6 +253,7 @@
       <button id="vList" title="Elenco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     </div>
     <button class="btn-ghost" id="impBtn" title="Importa">📥</button>
+    <button class="btn" id="addBtn">＋ Libro</button>
     <span class="count" id="cnt"></span>
   </div>
 
@@ -217,9 +265,140 @@
   <div class="sheet wide">
     <div class="sheet-head">
       <h2 id="bvTitle">Libro</h2>
+      <button class="btn-ghost" id="bvEdit" style="padding:8px 13px;font-size:13px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Modifica
+      </button>
       <button class="x" id="bvClose">✕</button>
     </div>
     <div class="sheet-body" id="bvBody"></div>
+  </div>
+</div>
+
+<!-- aggiungi / modifica libro -->
+<div class="modal" id="fModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="fTitle">Aggiungi libro</h2>
+      <button class="x" id="fClose">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="fgrid">
+        <div class="fcov">
+          <div class="cov-box" id="fCovBox">
+            <img id="fCovImg" alt="" hidden>
+            <div class="cov-ph" id="fCovPh"><span>📕</span><span class="s">Tocca per la copertina</span></div>
+          </div>
+          <input type="file" id="fPhoto" accept="image/*" hidden>
+          <button class="btn-ghost" id="fCovDel" style="width:100%;margin-top:8px" hidden>Togli copertina</button>
+
+          <div class="fld" style="margin-top:14px">
+            <label>Colore del dorso</label>
+            <div class="spine-pick" id="fSpine"></div>
+          </div>
+        </div>
+
+        <div class="fmain">
+          <div class="fld">
+            <label>Titolo *</label>
+            <input type="text" id="fT" placeholder="Es. Il piccolo bruco maisazio">
+          </div>
+          <div class="fld">
+            <label>Sottotitolo <span class="opt">· facoltativo</span></label>
+            <input type="text" id="fSub">
+          </div>
+          <div class="f2">
+            <div class="fld">
+              <label>Autori <span class="opt">· separati da virgola</span></label>
+              <input type="text" id="fA" placeholder="Eric Carle">
+            </div>
+            <div class="fld">
+              <label>Editore</label>
+              <input type="text" id="fP">
+            </div>
+          </div>
+          <div class="f3">
+            <div class="fld"><label>Anno</label><input type="text" id="fY" inputmode="numeric"></div>
+            <div class="fld"><label>Pagine</label><input type="text" id="fPg" inputmode="numeric"></div>
+            <div class="fld"><label>Collana</label><input type="text" id="fSe"></div>
+          </div>
+          <div class="f3">
+            <div class="fld"><label>Età</label>
+              <select id="fAg">
+                <option value="">—</option>
+                <option>0-3 anni</option><option>3-5 anni</option><option>5-7 anni</option>
+                <option>7-9 anni</option><option>9-12 anni</option><option>12+ anni</option>
+              </select>
+            </div>
+            <div class="fld"><label>Condizione</label>
+              <select id="fC">
+                <option value="">—</option>
+                <option>nuovo</option><option>ottimo</option><option>buono</option>
+                <option>discreto</option><option>rovinato</option><option>rotto</option>
+              </select>
+            </div>
+            <div class="fld"><label>ISBN</label><input type="text" id="fI" inputmode="numeric"></div>
+          </div>
+          <div class="f2">
+            <div class="fld"><label>Prezzo acquisto <span class="opt">· €</span></label><input type="text" id="fPr" inputmode="decimal"></div>
+            <div class="fld"><label>Prezzo rivendita <span class="opt">· €</span></label><input type="text" id="fSp" inputmode="decimal"></div>
+          </div>
+
+          <div class="fld">
+            <label>Generi <span class="opt">· clicca per scegliere, o scrivine uno nuovo</span></label>
+            <div class="tagbox" id="fGbox"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input type="text" id="fGnew" placeholder="Nuovo genere…" style="flex:1">
+              <button class="btn-ghost" id="fGadd">Aggiungi</button>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>Di chi è</label>
+            <div class="tagbox" id="fObox"></div>
+          </div>
+
+          <div class="fld">
+            <label>Note</label>
+            <textarea id="fN" rows="2"></textarea>
+          </div>
+
+          <div class="fld">
+            <label>Stato</label>
+            <div class="flags">
+              <label class="fl"><input type="checkbox" id="fLent"><span>📕 In prestito</span></label>
+              <input type="text" id="fLentTo" placeholder="a chi?" style="display:none">
+              <label class="fl"><input type="checkbox" id="fSold"><span>💰 Venduto</span></label>
+              <input type="text" id="fSoldPr" placeholder="a quanto?" inputmode="decimal" style="display:none">
+              <label class="fl"><input type="checkbox" id="fGift"><span>🎁 Da regalare</span></label>
+              <label class="fl"><input type="checkbox" id="fBuy"><span>🛒 Da comprare</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="fDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="fCancel">Annulla</button>
+        <button class="btn" id="fSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- conferma eliminazione -->
+<div class="modal" id="delModal" hidden>
+  <div class="sheet" style="max-width:400px">
+    <div class="sheet-body" style="text-align:center;padding:30px 26px">
+      <div style="font-size:38px;margin-bottom:12px">🗑️</div>
+      <h3 style="font-family:var(--disp);font-size:19px;margin-bottom:8px;color:var(--ink)">Eliminare il libro?</h3>
+      <p style="color:var(--ink-soft);font-size:14px;line-height:1.5" id="delName"></p>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="delNo">Annulla</button>
+      <button class="btn" id="delYes" style="background:var(--rust);color:#fff">Elimina</button>
+    </div>
   </div>
 </div>
 
@@ -442,8 +621,206 @@ function openBook(id) {
 
   $("bvModal").hidden = false;
 }
+$("bvEdit").addEventListener("click", function () {
+  var id = viewingId;
+  $("bvModal").hidden = true;
+  openForm(id);
+});
 $("bvClose").addEventListener("click", function () { $("bvModal").hidden = true; });
 $("bvModal").addEventListener("click", function (e) { if (e.target === $("bvModal")) $("bvModal").hidden = true; });
+
+/* ---------- modulo: aggiungi e modifica ---------- */
+var SPINE_COLORS = ["#5BB5C4", "#3A6E8F", "#7FB5E0", "#59a662", "#8FBF6B", "#E2A146", "#D97B4A",
+  "#C4553D", "#B5484F", "#D45D8C", "#F28DEE", "#9A6FBF", "#6F5FA8", "#4A5D8A",
+  "#8A7B5E", "#5E6B52", "#2F4A3C", "#C9AE6B", "#E8D9A8", "#F2EAD9"];
+var editingId = null, pendingPhoto = null, pickedGenres = [], pickedOwners = [], pickedSpine = null;
+
+function allGenres() {
+  var g = {};
+  books.forEach(function (b) { genresOf(b).forEach(function (x) { g[x] = 1; }); });
+  return Object.keys(g).sort();
+}
+function drawTags() {
+  $("fGbox").innerHTML = allGenres().map(function (g) {
+    return '<button class="tag' + (pickedGenres.indexOf(g) >= 0 ? " on" : "") + '" data-g="' + esc(g) + '">' + esc(g) + "</button>";
+  }).join("") || '<span style="font-size:12.5px;color:var(--ink-soft)">Nessun genere ancora. Scrivine uno qui sotto.</span>';
+  $("fGbox").querySelectorAll("[data-g]").forEach(function (t) {
+    t.addEventListener("click", function () {
+      var g = t.getAttribute("data-g"), i = pickedGenres.indexOf(g);
+      if (i >= 0) pickedGenres.splice(i, 1); else pickedGenres.push(g);
+      drawTags();
+    });
+  });
+  $("fObox").innerHTML = owners.map(function (o) {
+    var on = pickedOwners.indexOf(o.name) >= 0;
+    return '<button class="tag own' + (on ? " on" : "") + '" data-o="' + esc(o.name) + '"'
+      + (on ? ' style="background:' + esc(o.color) + '"' : '') + ">" + esc(o.name) + "</button>";
+  }).join("") || '<span style="font-size:12.5px;color:var(--ink-soft)">Nessun proprietario.</span>';
+  $("fObox").querySelectorAll("[data-o]").forEach(function (t) {
+    t.addEventListener("click", function () {
+      var o = t.getAttribute("data-o"), i = pickedOwners.indexOf(o);
+      if (i >= 0) pickedOwners.splice(i, 1); else pickedOwners.push(o);
+      drawTags();
+    });
+  });
+  $("fSpine").innerHTML = SPINE_COLORS.map(function (c) {
+    return '<button data-c="' + c + '" class="' + (pickedSpine === c ? "on" : "") + '" style="background:' + c + '" title="' + c + '"></button>';
+  }).join("");
+  $("fSpine").querySelectorAll("[data-c]").forEach(function (b) {
+    b.addEventListener("click", function () { pickedSpine = b.getAttribute("data-c"); drawTags(); });
+  });
+}
+$("fGadd").addEventListener("click", function () {
+  var g = $("fGnew").value.trim();
+  if (!g) return;
+  if (pickedGenres.indexOf(g) < 0) pickedGenres.push(g);
+  $("fGnew").value = "";
+  drawTags();
+});
+$("fGnew").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { e.preventDefault(); $("fGadd").click(); }
+});
+
+function setCover(url) {
+  if (url) {
+    $("fCovImg").src = url; $("fCovImg").hidden = false;
+    $("fCovPh").hidden = true; $("fCovDel").hidden = false;
+  } else {
+    $("fCovImg").removeAttribute("src"); $("fCovImg").hidden = true;
+    $("fCovPh").hidden = false; $("fCovDel").hidden = true;
+  }
+}
+$("fCovBox").addEventListener("click", function () { $("fPhoto").click(); });
+$("fCovDel").addEventListener("click", function (e) {
+  e.stopPropagation(); pendingPhoto = ""; setCover(null);
+});
+$("fPhoto").addEventListener("change", function () {
+  var f = this.files && this.files[0];
+  this.value = "";
+  if (!f) return;
+  toast("Comprimo la foto…");
+  /* La foto viene ridotta prima di salvarla: lo spazio gratuito è 1 GB. */
+  compressImage(f, 900, 0.72).then(function (blob) {
+    var fr = new FileReader();
+    fr.onload = function () { pendingPhoto = fr.result; setCover(fr.result); };
+    fr.readAsDataURL(blob);
+  }).catch(function () { toast("Immagine non leggibile"); });
+});
+["fLent", "fSold"].forEach(function (id) {
+  $(id).addEventListener("change", function () {
+    $(id === "fLent" ? "fLentTo" : "fSoldPr").style.display = this.checked ? "block" : "none";
+  });
+});
+
+function openForm(id) {
+  editingId = id || null;
+  pendingPhoto = null;
+  var b = id ? books.find(function (x) { return x.id === id; }) : null;
+
+  $("fTitle").textContent = id ? "Modifica libro" : "Aggiungi libro";
+  $("fDel").hidden = !id;
+  $("fT").value = b ? (b.title || "") : "";
+  $("fSub").value = b ? (b.subtitle || "") : "";
+  $("fA").value = b ? arr(b.authors).join(", ") : "";
+  $("fP").value = b ? (b.publisher || "") : "";
+  $("fY").value = b ? (b.year || "") : "";
+  $("fPg").value = b ? (b.pages || "") : "";
+  $("fSe").value = b ? (b.series || "") : "";
+  $("fAg").value = b ? (b.age || "") : "";
+  $("fC").value = b ? (b.condition || "") : "";
+  $("fI").value = b ? (b.isbn || "") : "";
+  $("fPr").value = b ? (b.price || "") : "";
+  $("fSp").value = b ? (b.sale_price || "") : "";
+  $("fN").value = b ? (b.notes || "") : "";
+  $("fLent").checked = b ? !!b.lent : false;
+  $("fLentTo").value = b ? (b.lent_to || "") : "";
+  $("fLentTo").style.display = ($("fLent").checked ? "block" : "none");
+  $("fSold").checked = b ? !!b.sold : false;
+  $("fSoldPr").value = b ? (b.sold_price || "") : "";
+  $("fSoldPr").style.display = ($("fSold").checked ? "block" : "none");
+  $("fGift").checked = b ? !!b.to_gift : false;
+  $("fBuy").checked = b ? !!b.to_buy : false;
+
+  pickedGenres = b ? genresOf(b).slice() : [];
+  pickedOwners = b ? ownersOf(b).slice() : [];
+  pickedSpine = b ? (b.spine_color || null) : SPINE_COLORS[Math.floor(Math.random() * SPINE_COLORS.length)];
+  setCover(b && b.photo ? b.photo : null);
+  drawTags();
+
+  $("fModal").hidden = false;
+  setTimeout(function () { $("fT").focus(); }, 60);
+}
+function closeForm() { $("fModal").hidden = true; editingId = null; pendingPhoto = null; }
+$("addBtn").addEventListener("click", function () { openForm(null); });
+$("fClose").addEventListener("click", closeForm);
+$("fCancel").addEventListener("click", closeForm);
+
+$("fSave").addEventListener("click", function () {
+  var title = $("fT").value.trim();
+  if (!title) { toast("Il titolo serve"); $("fT").focus(); return; }
+
+  var data = {
+    title: title,
+    subtitle: $("fSub").value.trim() || null,
+    authors: $("fA").value.split(",").map(function (s) { return s.trim(); }).filter(Boolean),
+    publisher: $("fP").value.trim() || null,
+    year: $("fY").value.trim() || null,
+    pages: $("fPg").value.trim() || null,
+    series: $("fSe").value.trim() || null,
+    age: $("fAg").value || null,
+    condition: $("fC").value || null,
+    isbn: $("fI").value.trim() || null,
+    price: $("fPr").value.trim() || null,
+    sale_price: $("fSp").value.trim() || null,
+    genre: pickedGenres,
+    owners: pickedOwners,
+    spine_color: pickedSpine,
+    notes: $("fN").value.trim() || null,
+    lent: $("fLent").checked,
+    lent_to: $("fLent").checked ? ($("fLentTo").value.trim() || null) : null,
+    sold: $("fSold").checked,
+    sold_price: $("fSold").checked ? ($("fSoldPr").value.trim() || null) : null,
+    to_gift: $("fGift").checked,
+    to_buy: $("fBuy").checked
+  };
+  /* pendingPhoto: null = non toccata, "" = tolta, altrimenti la nuova */
+  if (pendingPhoto !== null) data.photo = pendingPhoto || null;
+
+  var btn = $("fSave");
+  btn.disabled = true; btn.textContent = "Salvo…";
+
+  var op = editingId
+    ? sb.from("books").update(data).eq("id", editingId)
+    : sb.from("books").insert(data);
+
+  op.then(function (r) {
+    btn.disabled = false; btn.textContent = "Salva";
+    if (r.error) { console.error(r.error); toast("Errore: " + r.error.message); return; }
+    closeForm();
+    loadAll().then(function () { toast(editingId ? "Libro aggiornato" : "Libro aggiunto"); });
+  });
+});
+
+/* eliminazione */
+var deletingId = null;
+$("fDel").addEventListener("click", function () {
+  if (!editingId) return;
+  var b = books.find(function (x) { return x.id === editingId; });
+  deletingId = editingId;
+  $("delName").textContent = "«" + (b ? b.title : "") + "» verrà tolto dalla biblioteca. Non si può annullare.";
+  $("delModal").hidden = false;
+});
+$("delNo").addEventListener("click", function () { $("delModal").hidden = true; deletingId = null; });
+$("delYes").addEventListener("click", function () {
+  if (!deletingId) return;
+  sb.from("books").delete().eq("id", deletingId).then(function (r) {
+    $("delModal").hidden = true;
+    if (r.error) { toast("Errore: " + r.error.message); return; }
+    deletingId = null;
+    closeForm();
+    loadAll().then(function () { toast("Libro eliminato"); });
+  });
+});
 
 /* ---------- importazione ---------- */
 $("impBtn").addEventListener("click", function () { $("impModal").hidden = false; });
@@ -570,10 +947,14 @@ $("vGrid").addEventListener("click", function () { setView("grid"); });
 $("vList").addEventListener("click", function () { setView("list"); });
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
-    if (!$("impModal").hidden) $("impModal").hidden = true;
+    if (!$("delModal").hidden) { $("delModal").hidden = true; deletingId = null; }
+    else if (!$("fModal").hidden) closeForm();
+    else if (!$("impModal").hidden) $("impModal").hidden = true;
     else if (!$("bvModal").hidden) $("bvModal").hidden = true;
   }
 });
+$("fModal").addEventListener("click", function (e) { if (e.target === $("fModal")) closeForm(); });
+$("impModal").addEventListener("click", function (e) { if (e.target === $("impModal")) $("impModal").hidden = true; });
 
 /* ---------- caricamento ---------- */
 function loadAll() {
