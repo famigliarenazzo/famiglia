@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Le spese di casa · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#1C3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  .bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .fsel {
+    padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .fsel { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .fsel:focus { outline: none; border-color: var(--brass); }
+  .search { position: relative; flex: 1; min-width: 170px; }
+  .search input {
+    width: 100%; padding: 11px 14px 11px 38px; border-radius: 12px;
+    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+    color: var(--paper);
+  }
+  html[data-theme="light"] .search input { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
+  .search input:focus { outline: none; border-color: var(--brass); }
+  .search .mag { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--brass); }
+
+  /* ---------- riepilogo ---------- */
+  .sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .sbox { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 14px; padding: 15px 17px; box-shadow: 0 3px 14px var(--shadow); }
+  .sbox .k { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); }
+  .sbox .v { font-family: var(--disp); font-weight: 600; font-size: 23px; color: var(--ink); margin-top: 5px; letter-spacing: -.01em; }
+  .sbox .v.out { color: var(--rust); }
+  .sbox .v.in { color: #3E7A4B; }
+  .sbox .s { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+
+  /* ---------- barre per categoria ---------- */
+  .cats { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r); padding: 16px 18px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 18px; }
+  .cats h3 { font-family: var(--disp); font-weight: 600; font-size: 16px; color: var(--ink); margin-bottom: 14px; }
+  .cbar { margin-bottom: 11px; cursor: pointer; }
+  .cbar:last-child { margin-bottom: 0; }
+  .cbar-t { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 5px; color: var(--ink); }
+  .cbar-t .n { flex: 1; font-weight: 600; }
+  .cbar-t .a { font-weight: 700; }
+  .cbar-t .p { font-size: 11.5px; color: var(--ink-soft); min-width: 36px; text-align: right; }
+  .cbar-b { height: 8px; border-radius: 99px; background: var(--paper-soft); overflow: hidden; }
+  .cbar-f { height: 100%; border-radius: 99px; background: var(--brass); transition: width .3s; }
+  .cbar:hover .cbar-f { background: var(--brass-bright); }
+  .cbar.sel .cbar-f { background: var(--rust); }
+
+  /* ---------- movimenti ---------- */
+  .mv { background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r); overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+  .mrow { display: grid; grid-template-columns: 56px 1fr 150px 96px 28px; gap: 10px; align-items: center; padding: 9px 15px; border-bottom: 1px solid var(--paper-edge); }
+  .mrow:last-child { border-bottom: none; }
+  .mrow:hover { background: var(--paper-soft); }
+  .mrow .d { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .mrow .ds { font-size: 13.5px; color: var(--ink); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+  .mrow .ds small { display: block; font-size: 11px; color: var(--ink-soft); margin-top: 1px; }
+  .mrow select {
+    padding: 7px 9px; border: 1px solid var(--paper-edge); border-radius: 9px;
+    background: #FBF7EE; color: var(--ink); font-size: 12.5px; font-weight: 600; width: 100%;
+  }
+  .mrow select:focus { outline: none; border-color: var(--brass); }
+  .mrow select.none { border-style: dashed; color: var(--rust); }
+  .mrow .am { font-family: var(--disp); font-weight: 600; font-size: 15px; text-align: right; color: var(--rust); }
+  .mrow .am.pos { color: #3E7A4B; }
+  .mrow .x { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--ink-soft); font-size: 12px; }
+  .mrow .x:hover { background: var(--rust); color: #fff; }
+  @media (max-width: 700px) {
+    .mrow { grid-template-columns: 1fr 96px 26px; grid-template-areas: "ds am x" "sel sel sel"; row-gap: 7px; }
+    .mrow .d { display: none; }
+    .mrow .ds { grid-area: ds; }
+    .mrow .am { grid-area: am; }
+    .mrow .x { grid-area: x; }
+    .mrow select { grid-area: sel; }
+  }
+
+  /* ---------- importazione ---------- */
+  .drop {
+    border: 2px dashed var(--paper-edge); border-radius: 14px; padding: 32px 20px;
+    text-align: center; cursor: pointer; transition: .14s; background: var(--paper-soft);
+  }
+  .drop:hover { border-color: var(--brass); }
+  .drop .e { font-size: 34px; margin-bottom: 10px; }
+  .drop .t { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .drop .s { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; line-height: 1.55; }
+  .privacy {
+    display: flex; gap: 9px; align-items: flex-start; margin-top: 14px; padding: 12px 14px;
+    background: color-mix(in srgb, var(--brass) 13%, transparent); border-radius: 11px;
+    font-size: 12.5px; color: var(--ink); line-height: 1.5;
+  }
+  .privacy .i { font-size: 15px; flex-shrink: 0; }
+  .prog { margin-top: 16px; display: none; }
+  .prog.on { display: block; }
+  .prog .tk { height: 8px; background: var(--paper-soft); border-radius: 99px; overflow: hidden; }
+  .prog .fl { height: 100%; background: var(--brass); width: 0%; transition: width .25s; }
+  .prog .lb { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; text-align: center; }
+  .warn {
+    background: color-mix(in srgb, var(--rust) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--rust) 40%, transparent);
+    color: var(--rust); border-radius: 11px; padding: 11px 13px; font-size: 12.5px;
+    margin-top: 12px; line-height: 1.5;
+  }
+
+  /* ---------- anteprima import ---------- */
+  .pv { max-height: 44vh; overflow-y: auto; border: 1px solid var(--paper-edge); border-radius: 12px; }
+  .pvrow { display: grid; grid-template-columns: 26px 66px 1fr 130px 84px; gap: 8px; align-items: center; padding: 7px 11px; border-bottom: 1px solid var(--paper-edge); font-size: 12.5px; }
+  .pvrow:last-child { border-bottom: none; }
+  .pvrow.skip { opacity: .35; }
+  .pvrow .ck { width: 21px; height: 21px; border-radius: 6px; border: 2px solid var(--paper-edge); display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; }
+  .pvrow:not(.skip) .ck { background: var(--brass); border-color: var(--brass); color: var(--forest-deep); }
+  .pvrow .d { color: var(--ink-soft); font-weight: 600; font-size: 11.5px; }
+  .pvrow .ds { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pvrow select { padding: 5px 7px; border: 1px solid var(--paper-edge); border-radius: 8px; background: #FBF7EE; color: var(--ink); font-size: 11.5px; width: 100%; }
+  .pvrow .am { text-align: right; font-weight: 700; color: var(--rust); }
+  .pvrow .am.pos { color: #3E7A4B; }
+  .pvsum { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; color: var(--ink-soft); }
+  .pvsum b { color: var(--ink); }
+
+  /* ---------- movimento a mano ---------- */
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+
+<div class="top" id="top"></div>
+
+<div class="wrap">
+  <div style="margin-bottom:14px"><span class="status" id="status"><span class="dot"></span><span>Carico…</span></span></div>
+
+  <div class="bar">
+    <select class="fsel" id="fMonth"></select>
+    <select class="fsel" id="fCat"></select>
+    <div class="search">
+      <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" id="q" placeholder="Cerca nei movimenti…" autocomplete="off">
+    </div>
+    <button class="btn-ghost" id="addBtn">＋ A mano</button>
+    <button class="btn" id="impBtn">📄 Estratto conto</button>
+  </div>
+
+  <div id="body"><div class="loading"><div class="spin"></div>Carico…</div></div>
+</div>
+
+<!-- importazione -->
+<div class="modal" id="impModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="impT">Leggi l'estratto conto</h2>
+      <button class="x" id="impX">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="impStep1">
+        <div class="drop" id="drop">
+          <div class="e">📄</div>
+          <div class="t">Scegli il PDF dell'estratto conto</div>
+          <div class="s">Va bene qualunque banca: il formato lo riconosco dal file.<br>
+            Anche un CSV scaricato dalla banca.</div>
+        </div>
+        <input type="file" id="file" accept=".pdf,.csv,.txt" hidden>
+        <div class="privacy">
+          <span class="i">🔒</span>
+          <span>Il file <b>non viene caricato da nessuna parte</b>: lo leggo qui dentro,
+            sul tuo dispositivo. Nel database finiscono solo data, descrizione e importo
+            dei movimenti, dopo che li hai confermati.</span>
+        </div>
+        <div class="prog" id="prog">
+          <div class="tk"><div class="fl" id="fill"></div></div>
+          <div class="lb" id="lbl">…</div>
+        </div>
+        <div id="warns"></div>
+      </div>
+
+      <div id="impStep2" hidden>
+        <div class="pvsum" id="pvSum"></div>
+        <div class="pv" id="pv"></div>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.5">
+          Controlla che gli importi siano giusti e correggi le categorie sbagliate:
+          <b>le correzioni vengono imparate</b> e serviranno da sole la prossima volta.
+          Togli la spunta ai movimenti che non vuoi salvare.
+        </p>
+      </div>
+    </div>
+    <div class="sheet-foot" id="impFoot" hidden>
+      <button class="btn-ghost" id="impBack">Annulla</button>
+      <button class="btn" id="impOk">Salva i movimenti</button>
+    </div>
+  </div>
+</div>
+
+<!-- movimento a mano -->
+<div class="modal" id="mvModal" hidden>
+  <div class="sheet" style="max-width:460px">
+    <div class="sheet-head"><h2 id="mvT">Aggiungi movimento</h2><button class="x" id="mvX">✕</button></div>
+    <div class="sheet-body">
+      <div class="f2">
+        <div class="fld"><label>Data</label><input type="date" id="mvD"></div>
+        <div class="fld"><label>Importo <span class="opt">· € (negativo = uscita)</span></label>
+          <input type="text" id="mvA" inputmode="decimal" placeholder="-45,20"></div>
+      </div>
+      <div class="fld"><label>Descrizione</label><input type="text" id="mvDs" placeholder="Es. Spesa mercato"></div>
+      <div class="fld"><label>Categoria</label><select id="mvC"></select></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="mvCanc">Annulla</button>
+      <button class="btn" id="mvSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="famiglia.js"></script>
+<script src="estratto.js"></script>
+<script src="spese.js"></script>
+</body>
+</html>
