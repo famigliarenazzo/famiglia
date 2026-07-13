@@ -1,1 +1,29 @@
+# Tiene sveglio il progetto Supabase.
+# Il piano gratuito mette in pausa i progetti dopo 7 giorni senza traffico:
+# questa azione fa una chiamata banale ogni 3 giorni, così non succede mai.
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"   # ogni 3 giorni alle 06:00 UTC
+  workflow_dispatch:         # avvio manuale dal pulsante su GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sveglia il database
+        run: |
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/categories?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}")
+          echo "Risposta: $CODE"
+          # 200 = sveglio. 401 = raggiunto ma senza permessi di lettura:
+          # va bene lo stesso, il progetto ha ricevuto traffico.
+          if [ "$CODE" = "200" ] || [ "$CODE" = "401" ]; then
+            echo "Progetto attivo."
+          else
+            echo "Attenzione: risposta inattesa."
+            exit 1
+          fi
 
