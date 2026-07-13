@@ -320,27 +320,82 @@ function readPdf(f, name) {
       });
     };
     fr.readAsArrayBuffer(f);
-  }).catch(function () {
+  }).catch(function (e) {
+    console.error(e);
     $("prog").classList.remove("on");
-    warn("Non riesco a caricare il lettore PDF. Controlla la connessione.");
+    warn("Non riesco a caricare il lettore PDF (" + (e.message || "errore") + "). "
+      + "Può succedere se la connessione è assente o se una rete aziendale blocca le librerie esterne. "
+      + "Puoi riprovare, oppure scaricare dalla banca l'estratto conto in formato CSV, "
+      + "che leggo senza bisogno di nulla.");
   });
 }
-/* PDF.js pesa: lo carico solo quando serve davvero. */
+/* PDF.js pesa: lo carico solo quando serve davvero.
+   Attenzione alla versione: dalla 4 in poi il pacchetto distribuisce solo
+   moduli (.mjs), che non si caricano con un <script> classico. Uso quindi la
+   3.11, che ha ancora il file tradizionale, e in particolare la variante
+   "legacy", quella pensata per i browser meno recenti (Safari su iPhone).
+   Provo più fonti in fila: se una CDN non risponde, passo alla successiva. */
+var PDF_SOURCES = [
+  {
+    lib: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js",
+    worker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"
+  },
+  {
+    lib: "https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.min.js",
+    worker: "https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js"
+  },
+  {
+    lib: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+    worker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+  }
+];
+
 var pdfjsPromise = null;
 function loadPdfJs() {
   if (pdfjsPromise) return pdfjsPromise;
-  pdfjsPromise = new Promise(function (res, rej) {
-    var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.js";
-    s.onload = function () {
-      var lib = window.pdfjsLib;
-      if (!lib) { rej(new Error("pdfjs assente")); return; }
-      lib.GlobalWorkerOptions.workerSrc =
-        "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js";
-      res(lib);
-    };
-    s.onerror = function () { rej(new Error("caricamento fallito")); };
-    document.head.appendChild(s);
+
+  pdfjsPromise = new Promise(function (resolve, reject) {
+    var i = 0;
+
+    function attempt() {
+      if (i >= PDF_SOURCES.length) {
+        pdfjsPromise = null;      /* così un nuovo tentativo è possibile */
+        reject(new Error("nessuna fonte raggiungibile"));
+        return;
+      }
+      var src = PDF_SOURCES[i++];
+      var s = document.createElement("script");
+      var done = false;
+
+      /* Se una CDN è lenta o bloccata non resto appeso: dopo 12 secondi
+         passo alla prossima. */
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        s.remove();
+        attempt();
+      }, 12000);
+
+      s.src = src.lib;
+      s.onload = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        var lib = window.pdfjsLib;
+        if (!lib || !lib.getDocument) { attempt(); return; }
+        lib.GlobalWorkerOptions.workerSrc = src.worker;
+        resolve(lib);
+      };
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        s.remove();
+        attempt();          /* questa fonte non va: provo la successiva */
+      };
+      document.head.appendChild(s);
+    }
+    attempt();
   });
   return pdfjsPromise;
 }
