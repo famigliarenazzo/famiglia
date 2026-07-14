@@ -130,7 +130,11 @@ function pageToLines(items) {
       if (Math.abs(k - y) <= 2.2) { key = k; break; }
     }
     if (key == null) { key = y; rows[key] = []; }
-    rows[key].push({ x: x, t: t });
+    /* Il bordo DESTRO serve per le banche che allineano gli importi a
+       destra (Fineco): li' il bordo sinistro cambia col numero di cifre,
+       quello destro no. */
+    var w = (typeof it.width === "number") ? it.width : (t.length * 4.2);
+    rows[key].push({ x: x, x1: x + w, t: t });
   });
 
   return Object.keys(rows)
@@ -297,16 +301,17 @@ var RIGA_NON_MOVIMENTO = /SALDO\s+(INIZIALE|FINALE)|SALDO\s+A\s+VS|RIEPILOGO|Pag
 
 /* Cerca le intestazioni delle colonne importi. */
 function findHeaderColumns(pages) {
-  var out = { uscite: null, entrate: null };
+  var out = { uscite: null, entrate: null, usciteR: null, entrateR: null };
   pages.forEach(function (lines) {
     lines.forEach(function (line) {
       line.cells.forEach(function (c) {
         var t = c.t.trim();
-        if (/^uscite$/i.test(t) && out.uscite == null) out.uscite = c.x;
-        if (/^entrate$/i.test(t) && out.entrate == null) out.entrate = c.x;
-        /* altre banche usano parole diverse per la stessa cosa */
-        if (/^(dare|addebiti)$/i.test(t) && out.uscite == null) out.uscite = c.x;
-        if (/^(avere|accrediti)$/i.test(t) && out.entrate == null) out.entrate = c.x;
+        if (/^(uscite|dare|addebiti)$/i.test(t) && out.uscite == null) {
+          out.uscite = c.x; out.usciteR = c.x1;
+        }
+        if (/^(entrate|avere|accrediti)$/i.test(t) && out.entrate == null) {
+          out.entrate = c.x; out.entrateR = c.x1;
+        }
       });
     });
   });
@@ -317,31 +322,102 @@ function findHeaderColumns(pages) {
    Se la somma dei movimenti non torna con questi, qualcosa e' sfuggito
    e va detto, invece di lasciar credere che sia tutto a posto. */
 function findDeclaredTotals(allText) {
-  var out = {};
-  var m;
+  var out = {}, m;
+
   m = allText.match(/ENTRATE\s+COMPLESSIVE[^\n\d]*([\d.,]+)/i);
   if (m) out.entrate = parseAmount(m[1]);
   m = allText.match(/USCITE\s+COMPLESSIVE[^\n\d-]*(-?[\d.,]+)/i);
   if (m) out.uscite = Math.abs(parseAmount(m[1]) || 0);
-  m = allText.match(/SALDO\s+INIZIALE[^\n\d-]*(-?[\d.,]+)/i);
+
+  /* Sella scrive "SALDO INIZIALE  2.223,01".
+     Fineco scrive "+2.571,66 Saldo iniziale in euro": il numero viene
+     PRIMA delle parole. Cerco in entrambi i versi.                      */
+  m = allText.match(/SALDO\s+INIZIALE[^\n\d+-]*([+-]?[\d.,]+)/i)
+   || allText.match(/([+-]?[\d.,]+)\s+Saldo\s+iniziale/i);
   if (m) out.iniziale = parseAmount(m[1]);
-  m = allText.match(/SALDO\s+FINALE[^\n\d-]*(-?[\d.,]+)/i);
+
+  m = allText.match(/SALDO\s+FINALE[^\n\d+-]*([+-]?[\d.,]+)/i)
+   || allText.match(/([+-]?[\d.,]+)\s+Saldo\s+finale/i);
   if (m) out.finale = parseAmount(m[1]);
+
   return out;
 }
 
-/* Estrae i movimenti usando le colonne dichiarate. */
-function movesByColumns(pages, year, cols) {
-  var moves = [];
+/* Estrae i movimenti usando le colonne dichiarate.
+
+   Deve reggere due impaginazioni diverse:
+     Sella    data | descrizione | importo
+     Fineco   data | data | importo | descrizione
+
+   e due modi di allineare i numeri. Sella li allinea a sinistra, Fineco a
+   destra: la' un "6,95" e un "2.000,00" della stessa colonna partono da x
+   diverse ma FINISCONO alla stessa x. Quindi guardo il bordo destro.
+
+   Attenzione a una trappola: le INTESTAZIONI ("Uscite", "Entrate") sono
+   allineate a sinistra anche quando i numeri sotto sono allineati a destra.
+   Confrontare la x di un numero con la x della sua intestazione non
+   funziona. Percio' il confine tra le due colonne lo ricavo dai NUMERI:
+   raccolgo dove finiscono, e cerco il vuoto che li separa in due gruppi.  */
+function amountColumns(pages, cols) {
+  /* Tutti i bordi destri dei numeri che stanno nella fascia degli importi,
+     cioe' prima che cominci la descrizione. */
+  var xs = [];
+  var maxHdr = Math.max(cols.uscite, cols.entrate);
   pages.forEach(function (lines) {
     lines.forEach(function (line) {
       if (RIGA_NON_MOVIMENTO.test(line.text)) return;
-      var cells = line.cells, dates = [], amts = [];
-      cells.forEach(function (c, i) {
-        var d = parseDate(c.t);
-        if (d) { dates.push({ i: i, v: d }); return; }
-        if (looksAmount(c.t)) amts.push({ i: i, x: c.x, v: parseAmount(c.t), raw: c.t });
+      var hasDate = line.cells.some(function (c) { return parseDate(c.t); });
+      if (!hasDate) return;
+      line.cells.forEach(function (c) {
+        if (parseDate(c.t)) return;
+        if (!looksAmount(c.t)) return;
+        var r = (c.x1 != null ? c.x1 : c.x);
+        /* solo i numeri "in colonna": scarto quelli dentro la descrizione */
+        if (c.x >= cols.uscite - 30 && r <= maxHdr + 90) xs.push(r);
       });
+    });
+  });
+  if (xs.length < 6) return null;
+
+  xs.sort(function (a, b) { return a - b; });
+
+  /* Il vuoto piu ampio separa la colonna uscite da quella entrate. */
+  var gap = 0, cut = null;
+  for (var i = 1; i < xs.length; i++) {
+    var d = xs[i] - xs[i - 1];
+    if (d > gap) { gap = d; cut = (xs[i] + xs[i - 1]) / 2; }
+  }
+  /* Se il vuoto e' risibile, i numeri stanno tutti in una colonna sola:
+     non ho due gruppi da separare e non mi fido di questo metodo. */
+  if (gap < 12 || cut == null) return null;
+
+  return { confine: cut, destra: xs[xs.length - 1] };
+}
+
+function movesByColumns(pages, year, cols) {
+  var moves = [];
+
+  var ac = amountColumns(pages, cols);
+  /* Ripiego: se non riesco a separare i numeri, uso le intestazioni.
+     Va bene per Sella, dove i numeri sono allineati a sinistra come loro. */
+  var confine = ac ? ac.confine : (cols.uscite + cols.entrate) / 2;
+  var limite  = ac ? ac.destra + 6
+                   : Math.max(cols.entrateR != null ? cols.entrateR : cols.entrate,
+                              cols.usciteR  != null ? cols.usciteR  : cols.uscite) + 40;
+
+  pages.forEach(function (lines) {
+    lines.forEach(function (line) {
+      if (RIGA_NON_MOVIMENTO.test(line.text)) return;
+      var cells = line.cells, dates = [], amts = [], i;
+
+      for (i = 0; i < cells.length; i++) {
+        var c = cells[i];
+        var d = parseDate(c.t);
+        if (d) { dates.push({ i: i, v: d }); continue; }
+        if (looksAmount(c.t)) {
+          amts.push({ i: i, x: c.x, x1: (c.x1 != null ? c.x1 : c.x), v: parseAmount(c.t) });
+        }
+      }
       if (!dates.length || !amts.length) return;
 
       var dt = dates[0].v;
@@ -351,26 +427,31 @@ function movesByColumns(pages, year, cols) {
       }
       if (!dt || typeof dt !== "string") return;
 
-      /* L'importo del movimento e' l'ultimo numero della riga. */
-      var a = amts[amts.length - 1];
+      /* Tengo solo i numeri che cadono nella fascia degli importi: quelli
+         piu' a destra fanno parte della descrizione ("Carta N. ***** 228"). */
+      var cand = amts.filter(function (a) { return a.x1 <= limite; });
+      if (!cand.length) return;
+      var a = cand[cand.length - 1];
 
-      /* Il segno lo decide la colonna, non la fantasia. */
-      var dU = Math.abs(a.x - cols.uscite);
-      var dE = Math.abs(a.x - cols.entrate);
-      var entrata = dE < dU;
+      /* Il segno lo dice la colonna, non l'intuito. */
+      var entrata = a.x1 > confine;
 
+      /* La descrizione sta a destra dell'importo (Fineco) o in mezzo (Sella):
+         prendo il lato dove c'e' davvero del testo. */
       var lo = dates[dates.length - 1].i + 1;
-      var desc = cells.slice(lo, a.i).map(function (c) { return c.t; })
-        .join(" ").replace(/\s+/g, " ").trim();
+      function testo(from, to) {
+        return cells.slice(from, to).map(function (c) { return c.t; })
+          .join(" ").replace(/\s+/g, " ").trim();
+      }
+      var destra = testo(a.i + 1, cells.length);
+      var mezzo  = testo(lo, a.i);
+      var desc = destra.length >= mezzo.length ? destra : mezzo;
       if (!desc || desc.length < 2) return;
 
       moves.push({
-        date: dt,
-        description: desc,
+        date: dt, description: desc,
         amount: entrata ? Math.abs(a.v) : -Math.abs(a.v),
-        _x: a.x,
-        _signed: true,          /* il segno e' gia' deciso: non toccarlo dopo */
-        _raw: line.text
+        _x: a.x, _signed: true, _raw: line.text
       });
     });
   });
@@ -438,10 +519,10 @@ function parseStatement(pages) {
   uniq.forEach(function (m) { if (m.amount > 0) ent += m.amount; else usc += -m.amount; });
 
   var quadra = null;
+
   if (totals.entrate != null && totals.uscite != null) {
-    var dE = Math.abs(ent - totals.entrate);
-    var dU = Math.abs(usc - totals.uscite);
-    quadra = (dE < 0.02 && dU < 0.02);
+    /* La banca dichiara i totali del periodo (Sella): confronto diretto. */
+    quadra = (Math.abs(ent - totals.entrate) < 0.02 && Math.abs(usc - totals.uscite) < 0.02);
     if (quadra) {
       warnings.push("Verifica riuscita: entrate e uscite coincidono con i totali "
         + "dichiarati dalla banca (" + fmtE(totals.entrate) + " e " + fmtE(totals.uscite) + ").");
@@ -449,6 +530,23 @@ function parseStatement(pages) {
       warnings.push("Attenzione: i miei totali (entrate " + fmtE(ent) + ", uscite " + fmtE(usc)
         + ") non coincidono con quelli dichiarati dalla banca (" + fmtE(totals.entrate)
         + " e " + fmtE(totals.uscite) + "). Controlla i movimenti prima di salvarli.");
+    }
+  } else if (totals.iniziale != null && totals.finale != null) {
+    /* La banca dichiara solo i saldi (Fineco). La verifica e persino piu
+       severa: saldo iniziale + entrate - uscite deve dare il saldo finale.
+       Se un solo movimento manca o ha il segno sbagliato, non torna.     */
+    var atteso = totals.finale - totals.iniziale;   /* la differenza vera */
+    var mio = ent - usc;                            /* la mia differenza  */
+    quadra = Math.abs(mio - atteso) < 0.02;
+    if (quadra) {
+      warnings.push("Verifica riuscita: partendo dal saldo iniziale di "
+        + fmtE(totals.iniziale) + " e applicando i movimenti trovati si arriva "
+        + "esattamente al saldo finale di " + fmtE(totals.finale) + ".");
+    } else {
+      warnings.push("Attenzione: applicando i movimenti che ho trovato al saldo iniziale ("
+        + fmtE(totals.iniziale) + ") arrivo a " + fmtE(totals.iniziale + mio)
+        + ", ma la banca dichiara " + fmtE(totals.finale)
+        + ". Mi sfugge qualcosa: controlla prima di salvare.");
     }
   }
 

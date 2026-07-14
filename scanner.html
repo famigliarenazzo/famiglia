@@ -12,8 +12,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="famiglia.css">
 <style>
+  /* chip e righe: gli stessi della biblioteca */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 5px 11px;
+  }
+  .rows { margin-top: 16px; }
+  .row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--paper-edge); font-size: 13.5px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { width: 108px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+  .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
   .empty{
-    border:1.5px dashed var(--line,#2a3550);border-radius:16px;
+    border:1.5px dashed var(--paper-edge);border-radius:16px;
     padding:44px 20px;text-align:center;
   }
   .empty h3{margin:0 0 6px;font-size:16px}
@@ -23,7 +34,7 @@
   .pages{display:flex;flex-direction:column;gap:12px;margin-top:14px}
   .page-card{
     display:flex;gap:12px;align-items:center;
-    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    background:var(--paper);border:1px solid var(--paper-edge);
     border-radius:14px;padding:11px;
   }
   .thumb{width:64px;height:84px;object-fit:cover;border-radius:8px;background:#fff;flex:none}
@@ -35,18 +46,18 @@
   .page-actions{display:flex;flex-direction:column;gap:5px}
   .icon-btn{
     width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;cursor:pointer;
+    border:1px solid var(--paper-edge);background:transparent;color:inherit;cursor:pointer;
   }
   .icon-btn svg{width:15px;height:15px;stroke-width:2;fill:none;stroke:currentColor}
   .icon-btn:disabled{opacity:.25;cursor:default}
 
   /* editor */
   .editor{
-    position:fixed;inset:0;background:var(--bg,#0d1117);z-index:60;
+    position:fixed;inset:0;background:var(--forest);z-index:60;
     display:none;flex-direction:column;
   }
   .editor.open{display:flex}
-  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line,#2a3550)}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--paper-edge)}
   .ed-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
   .canvas-wrap{position:relative;touch-action:none;line-height:0}
   .canvas-wrap canvas{border-radius:8px;display:block}
@@ -56,31 +67,31 @@
     position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;
     display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;
   }
-  .handle .ring{width:16px;height:16px;border-radius:50%;background:var(--acc,#7aa2f7);border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-  .ed-foot{padding:14px 16px;border-top:1px solid var(--line,#2a3550)}
+  .handle .ring{width:16px;height:16px;border-radius:50%;background:var(--brass);border:2.5px solid var(--paper);box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .ed-foot{padding:14px 16px;border-top:1px solid var(--paper-edge)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px}
   .filter{
-    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+    border:1px solid var(--paper-edge);background:transparent;color:inherit;
     border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;
   }
-  .filter.active{background:var(--acc,#7aa2f7);border-color:var(--acc,#7aa2f7);color:#0d1117;font-weight:600}
+  .filter.active{background:var(--brass);border-color:var(--brass);color:var(--on-brass);font-weight:600}
 
   .dock{
     position:sticky;bottom:0;padding:12px 0 16px;
-    background:linear-gradient(transparent,var(--bg,#0d1117) 30%);
+    background:linear-gradient(transparent,var(--forest) 30%);
   }
   .dock-row{display:flex;gap:9px;flex-wrap:wrap}
   .saved{display:flex;flex-direction:column;gap:9px;margin-top:12px}
   .doc{
     display:flex;gap:11px;align-items:center;
-    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    background:var(--paper);border:1px solid var(--paper-edge);
     border-radius:12px;padding:11px 13px;
   }
   .doc .t{flex:1;min-width:0}
   .doc .t b{display:block;font-size:14px}
   .doc .t span{font-size:11px;opacity:.5}
   .doc .acts{display:flex;gap:5px}
-  .doc .acts button{border:1px solid var(--line,#2a3550);background:transparent;color:inherit;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer}
+  .doc .acts button{border:1px solid var(--paper-edge);background:transparent;color:inherit;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer}
   .ocr-note{font-size:11px;opacity:.5;margin-top:4px}
   .empty-note{opacity:.5;font-size:13px;padding:16px 0;text-align:center}
   .fld select,.fld input{width:100%}
@@ -88,7 +99,7 @@
 </head>
 <body>
 
-<header class="hdr" id="hdr"></header>
+<header class="top" id="top"></header>
 
 <main class="wrap">
   <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
@@ -97,7 +108,7 @@
     <h3>Nessuna pagina</h3>
     <p>Fotografa un documento: i bordi vengono trovati da soli.</p>
     <div class="row-btn">
-      <button class="btn-primary" id="shootBtn">📷 Fotografa</button>
+      <button class="btn" id="shootBtn">📷 Fotografa</button>
       <button class="btn-ghost" id="uploadBtn">🖼️ Dalla galleria</button>
     </div>
   </div>
@@ -108,7 +119,7 @@
     <div class="dock-row">
       <button class="btn-ghost" id="addMoreBtn">＋ Aggiungi pagina</button>
       <button class="btn-ghost" id="pdfBtn">⬇️ Scarica il PDF</button>
-      <button class="btn-primary" id="saveBtn">💾 Salva</button>
+      <button class="btn" id="saveBtn">💾 Salva</button>
     </div>
   </div>
 
@@ -140,7 +151,7 @@
       <button class="filter" data-f="gray">Grigio</button>
       <button class="filter" data-f="bw">Bianco/Nero</button>
     </div>
-    <button class="btn-primary" id="applyBtn" style="width:100%">Applica</button>
+    <button class="btn" id="applyBtn" style="width:100%">Applica</button>
   </div>
 </div>
 
@@ -169,7 +180,7 @@
     </div>
     <div class="sheet-foot">
       <button class="btn-ghost" id="sCanc">Annulla</button>
-      <button class="btn-primary" id="sSave">Salva</button>
+      <button class="btn" id="sSave">Salva</button>
     </div>
   </div>
 </div>
@@ -193,7 +204,7 @@
    · una scansione puo finire direttamente nella cartella clinica
    ===================================================================== */
 
-$("hdr").innerHTML = toolHeader("Lo scanner", "");
+$("top").innerHTML = toolHeader("Lo scanner", "");
 
 var BUCKET = "privati";
 var MAXDIM = 1600;
@@ -442,7 +453,7 @@ function drawEditor(p) {
 function renderHandles() {
   var pts = editCorners.map(function (c) { return { x: c.x * dispScale, y: c.y * dispScale }; });
   var poly = pts.map(function (p) { return p.x + "," + p.y; }).join(" ");
-  $("overlay").innerHTML = '<polygon points="' + poly + '" fill="rgba(122,162,247,0.12)" stroke="#7aa2f7" stroke-width="1.7" stroke-dasharray="6 4"/>';
+  $("overlay").innerHTML = '<polygon points="' + poly + '" fill="rgba(196,154,74,0.14)" stroke="#C49A4A" stroke-width="1.7" stroke-dasharray="6 4"/>';
   var box = $("handles"); box.innerHTML = "";
   pts.forEach(function (pt, i) {
     var h = document.createElement("div");

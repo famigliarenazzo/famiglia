@@ -213,17 +213,47 @@ html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-col
 /* ---------- caselle a scelta multipla (portate, stagioni) ---------- */
 .chipset{display:flex;flex-wrap:wrap;gap:7px}
 .chipsel{
-  border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+  border:1px solid var(--paper-edge);background:transparent;color:inherit;
   border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;
   cursor:pointer;transition:background .12s,border-color .12s,color .12s;
 }
-.chipsel:hover{border-color:var(--acc,#7aa2f7)}
-.chipsel.on{background:var(--acc,#7aa2f7);border-color:var(--acc,#7aa2f7);color:#0d1117;font-weight:600}
+.chipsel:hover{border-color:var(--brass)}
+.chipsel.on{background:var(--brass);border-color:var(--brass);color:var(--on-brass);font-weight:600}
 .fld .hint{font-weight:400;opacity:.55;font-size:11px;margin-left:6px}
 
 /* ---------- barra azioni della scheda libro ---------- */
 .sheet-foot{
   display:flex;gap:8px;flex-wrap:wrap;
-  padding:12px 18px 16px;border-top:1px solid var(--line,#2a3550);
+  padding:12px 18px 16px;border-top:1px solid var(--paper-edge);
 }
 .bv-actions .btn-ghost{padding:9px 13px;font-size:13px}
+
+/* ---------- spese: esercenti, note, scheda movimento ---------- */
+.cats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.vsw { display: flex; gap: 6px; }
+.vb {
+  border: 1px solid var(--paper-edge); background: transparent; color: var(--ink-soft);
+  border-radius: 99px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.vb:hover { border-color: var(--brass); color: var(--brass-text); }
+.vb.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
+
+.mrow .dsn {
+  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; border-bottom: 1px dashed transparent;
+}
+.mrow .dsn:hover { border-bottom-color: var(--brass); color: var(--brass-text); }
+.msub { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 3px; }
+.mtag, .ntag {
+  font-size: 11px; font-weight: 600; border-radius: 99px; padding: 2px 8px;
+  background: var(--paper-soft); color: var(--ink-soft);
+}
+.mtag { background: color-mix(in srgb, var(--brass) 22%, transparent); color: var(--brass-text); }
+
+.orig {
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft);
+  background: var(--paper-soft); border-radius: 10px; padding: 9px 11px; margin: 0 0 15px;
+  word-break: break-word;
+}
+.chk { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; margin-bottom: 15px; cursor: pointer; line-height: 1.45; }
+.chk input { width: auto; margin-top: 2px; flex-shrink: 0; }

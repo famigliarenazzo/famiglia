@@ -196,6 +196,36 @@
 </div>
 
 <!-- movimento a mano -->
+<!-- scheda di un movimento: nome, esercente, note -->
+<div class="modal" id="edModal" hidden>
+  <div class="sheet" style="max-width:480px">
+    <div class="sheet-head"><h2>Il movimento</h2><button class="x" id="edX">✕</button></div>
+    <div class="sheet-body">
+      <p class="orig" id="edOrig"></p>
+
+      <div class="fld"><label>Nome <span class="opt">· come vuoi chiamarlo tu</span></label>
+        <input type="text" id="edLabel" placeholder="Spesa settimanale"></div>
+
+      <div class="fld"><label>Esercente <span class="opt">· per accorpare i movimenti</span></label>
+        <input type="text" id="edMerch" list="merchList" placeholder="Carrefour">
+        <datalist id="merchList"></datalist>
+      </div>
+
+      <label class="chk" id="edPropWrap">
+        <input type="checkbox" id="edProp" checked>
+        <span>Accorpa anche gli altri movimenti simili, e quelli futuri</span>
+      </label>
+
+      <div class="fld"><label>Note</label>
+        <textarea id="edNotes" rows="3" placeholder="Regalo per il compleanno di Aurora…"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="edCanc">Annulla</button>
+      <button class="btn" id="edSave">Salva</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="mvModal" hidden>
   <div class="sheet" style="max-width:460px">
     <div class="sheet-head"><h2 id="mvT">Aggiungi movimento</h2><button class="x" id="mvX">✕</button></div>

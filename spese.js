@@ -4,8 +4,9 @@
    di ogni mese. Le regole di categoria imparano dalle correzioni.
    ===================================================================== */
 
-var expenses = [], ecats = [], rules = [];
-var fMonth = "", fCat = "", selCat = null;
+var expenses = [], ecats = [], rules = [], mrules = [];
+var vista = "cat";   /* "cat" = per tipologia, "mer" = per esercente */
+var fMonth = "", fCat = "", selCat = null, selMer = null;
 
 $("top").innerHTML = toolHeader("Le spese di casa", "");
 
@@ -31,7 +32,12 @@ function rows() {
     if (fCat === "__none") { if (e.category_id) return false; }
     else if (fCat && e.category_id !== fCat) return false;
     if (selCat && e.category_id !== selCat) return false;
-    if (q && (e.description || "").toLowerCase().indexOf(q) < 0) return false;
+    if (q) {
+      var testo = ((e.description || "") + " " + (e.label || "") + " "
+                 + (e.merchant || "") + " " + (e.notes || "")).toLowerCase();
+      if (testo.indexOf(q) < 0) return false;
+    }
+    if (selMer && merchOf(e) !== selMer) return false;
     return true;
   }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
 }
@@ -96,8 +102,38 @@ function draw() {
   }).sort(function (a, b) { return b.tot - a.tot; });
 
   var maxv = cl.length ? cl[0].tot : 1;
-  var cats = cl.length ? '<div class="cats"><h3>Dove sono finiti i soldi</h3>'
-    + cl.map(function (c) {
+
+  /* --- le stesse spese, ma raggruppate per esercente --- */
+  var byMer = {};
+  scope.forEach(function (e) {
+    var a = Number(e.amount);
+    if (a >= 0) return;                 /* le entrate non hanno un esercente */
+    var m = merchOf(e);
+    if (!m) return;                     /* non riconosciuto: fuori dal conteggio */
+    byMer[m] = (byMer[m] || 0) + (-a);
+  });
+  var ml = Object.keys(byMer).map(function (k) {
+    return { name: k, tot: byMer[k] };
+  }).sort(function (a, b) { return b.tot - a.tot; }).slice(0, 12);
+  var maxm = ml.length ? ml[0].tot : 1;
+
+  var pannello;
+  if (vista === "mer") {
+    pannello = ml.length
+      ? ml.map(function (m) {
+          var pc = out ? Math.round(m.tot / out * 100) : 0;
+          return '<div class="cbar' + (selMer === m.name ? " sel" : "") + '" data-m="' + esc(m.name) + '">'
+            + '<div class="cbar-t"><span>\ud83c\udfea</span>'
+            + '<span class="n">' + esc(m.name) + "</span>"
+            + '<span class="a">' + fmtEur(m.tot) + "</span>"
+            + '<span class="p">' + pc + "%</span></div>"
+            + '<div class="cbar-b"><div class="cbar-f" style="width:' + Math.round(m.tot / maxm * 100) + '%"></div></div>'
+            + "</div>";
+        }).join("")
+      : '<p class="hint" style="opacity:.6;font-size:13px">Nessun esercente riconosciuto. '
+        + 'Tocca un movimento e dagli un nome: da lì in poi li accorpo da solo.</p>';
+  } else {
+    pannello = cl.map(function (c) {
       var pc = out ? Math.round(c.tot / out * 100) : 0;
       return '<div class="cbar' + (selCat === c.id ? " sel" : "") + '" data-c="' + c.id + '">'
         + '<div class="cbar-t"><span>' + c.icon + "</span>"
@@ -106,7 +142,17 @@ function draw() {
         + '<span class="p">' + pc + "%</span></div>"
         + '<div class="cbar-b"><div class="cbar-f" style="width:' + Math.round(c.tot / maxv * 100) + '%"></div></div>'
         + "</div>";
-    }).join("") + "</div>" : "";
+    }).join("");
+  }
+
+  var cats = (cl.length || ml.length) ? '<div class="cats">'
+    + '<div class="cats-head">'
+    + "<h3>Dove sono finiti i soldi</h3>"
+    + '<div class="vsw">'
+    + '<button class="vb' + (vista === "cat" ? " on" : "") + '" data-v="cat">Per tipologia</button>'
+    + '<button class="vb' + (vista === "mer" ? " on" : "") + '" data-v="mer">Per esercente</button>'
+    + "</div></div>"
+    + pannello + "</div>" : "";
 
   /* movimenti */
   var mv = list.length ? '<div class="mv">' + list.map(function (e) {
@@ -117,13 +163,19 @@ function draw() {
         return '<option value="' + c.id + '"' + (c.id === e.category_id ? " selected" : "") + ">"
           + (c.icon || "💸") + " " + esc(c.name) + "</option>";
       }).join("");
+    var mer = merchOf(e);
+    var sotto = [];
+    if (mer) sotto.push('<span class="mtag">\ud83c\udfea ' + esc(mer) + "</span>");
+    if (e.notes) sotto.push('<span class="ntag">\u270e ' + esc(e.notes) + "</span>");
+    if (e.source) sotto.push("<small>" + esc(e.source) + "</small>");
+
     return '<div class="mrow" data-e="' + e.id + '">'
       + '<span class="d">' + d[2] + " " + MESI_BREVI[+d[1]] + "</span>"
-      + '<span class="ds">' + esc(e.description)
-      + (e.source ? "<small>" + esc(e.source) + "</small>" : "") + "</span>"
+      + '<span class="ds"><button class="dsn" data-edit>' + esc(titleOf(e)) + "</button>"
+      + (sotto.length ? '<span class="msub">' + sotto.join(" ") + "</span>" : "") + "</span>"
       + '<select data-cat class="' + (e.category_id ? "" : "none") + '">' + opts + "</select>"
       + '<span class="am' + (a >= 0 ? " pos" : "") + '">' + fmtEur(a) + "</span>"
-      + '<button class="x" data-del>✕</button></div>';
+      + '<button class="x" data-del>\u2715</button></div>';
   }).join("") + "</div>"
     : '<div class="empty"><div class="emo">🔍</div><h3>Nessun movimento</h3><p>Nessun movimento con questi filtri.</p></div>';
 
@@ -139,6 +191,20 @@ function draw() {
       draw();
     });
   });
+  h.querySelectorAll("[data-v]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      vista = b.getAttribute("data-v");
+      selCat = null; selMer = null;
+      draw();
+    });
+  });
+  h.querySelectorAll("[data-m]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var n = b.getAttribute("data-m");
+      selMer = (selMer === n) ? null : n;
+      draw();
+    });
+  });
   h.querySelectorAll(".mrow").forEach(function (r) {
     var id = r.getAttribute("data-e");
     var e = expenses.filter(function (x) { return x.id === id; })[0];
@@ -146,6 +212,7 @@ function draw() {
     r.querySelector("[data-cat]").addEventListener("change", function () {
       setCategory(e, this.value || null);
     });
+    r.querySelector("[data-edit]").addEventListener("click", function () { openMove(e); });
     r.querySelector("[data-del]").addEventListener("click", function () {
       expenses = expenses.filter(function (x) { return x.id !== id; });
       draw();
@@ -164,6 +231,151 @@ function draw() {
   });
 });
 $("q").addEventListener("input", draw);
+
+
+/* ==================================================================
+   GLI ESERCENTI
+   Lo stesso negozio compare con nomi diversi ("Carrefour 2117 Rivalta",
+   "Carrefour 2117 Nichelino"). Accorpandoli sotto un nome solo si vede
+   quanto si spende DA CHI, non solo IN COSA.
+   ================================================================== */
+
+/* Deduce il nome dell'esercente dalla descrizione della banca.
+
+   Le descrizioni sono zeppe di rumore: numeri di carta, date, codici,
+   citta', sigle di circuito. Sotto c'e' quasi sempre un nome, e quel nome
+   e' lo stesso per il Carrefour di Rivalta e per quello di Nichelino.
+
+   Non fa miracoli e non deve farne: se non e' ragionevolmente sicuro
+   restituisce null, e il movimento resta com'e' finche' non lo rinomini
+   tu. Meglio nessuna proposta che una proposta sbagliata, perche' una
+   proposta sbagliata accorpa spese che non c'entrano niente.            */
+
+/* I fornitori che riconosco per nome: qui il nome pulito e' noto. */
+var NOTI = [
+  "Carrefour","Esselunga","Lidl","Aldi","Penny Market","Coop","Conad","Eurospin",
+  "Naturasi","Naturasi","Bennet","Mercato","Pam","Crai","Iper","Ipercoop",
+  "Amazon","Apple","Google","Netflix","Disney Plus","Spotify","Satispay",
+  "American Express","Paypal","Booking","Airbnb","Trenitalia","Italo",
+  "Ikea","Decathlon","Leroy Merlin","Zara","H&M","Kiabi","Iperbimbo",
+  "Lillydoo","Lush","Redcare","Trekkinn","Istock","Wordpress",
+  "Claude.ai","Anthropic","Octopus Energy","Multiwire","Prima Assicurazioni",
+  "Negozio Leggero","Antica Legumeria","Giunti Al Punto","Libreria dei Ragazzi",
+  "Poke House","Droppos","Discar","Shopsi","Upgrowin","Omegor","Gelateria"
+];
+
+/* Parole che non sono mai il nome di un esercente. */
+var RUMORE = new RegExp(
+  "\\b(carta|n\\.?|data|operazione|pagamento|pos|prelevamento|prelievo|"
+  + "addebito|accredito|bonifico|sdd|mand|mandato|fattura|vs|carico|da|per|"
+  + "il|lo|la|di|del|della|dei|srl|s\\.r\\.l|spa|s\\.p\\.a|sa|s\\.a|gmbh|"
+  + "ltd|inc|bv|nv|www|com|it|eu|europe|italia|italy|subscription|"
+  + "commissioni|canone|mensile|sconto|imposta|bollo|giroconto|cc|"
+  + "ord|ben|dt|info|cli|iban|transid|cau|ins|atm|ora|"
+  + "torino|rivoli|bruino|milano|roma|rivalta|orbassano|collegno|beinasco|"
+  + "nichelino|piossasco|giaveno|lecco|monza|verona|pordenone|dublin|"
+  + "luxembourg|frankfurt|celra|hoofddorp|sumirago|asola|to|mi|ie|lu|de|es|nl|fr|ca|mt)\\b",
+  "gi");
+
+/* Non sono esercenti: sono movimenti fra conti, tasse, canoni. Accorparli
+   sotto un "negozio" non ha senso e sporcherebbe le statistiche.        */
+var NON_ESERCENTE = /giroconto|bonifico|^ord:|assegno unico|saldo|canone|sconto canone|commissioni|imposta di bollo|prelevamento|prelievo|timeout prel|pagamento bollettino|protocollo delega|addebito imposta/i;
+
+function guessMerchant(desc) {
+  if (!desc) return null;
+  var d = String(desc);
+
+  if (NON_ESERCENTE.test(d)) return null;
+
+  /* Le farmacie sono esercenti diversi fra loro: la Comunale di Orbassano
+     non e la F20 di Bruino. Tengo il nome per esteso, cosi non si sommano
+     spese fatte in posti diversi. */
+  var fa = d.match(/\bfarmacia\s+([\w']+(?:\s+[\w']+)?)/i);
+  if (fa) {
+    var nf = ("Farmacia " + fa[1]).replace(/\s+/g, " ").trim();
+    return nf.toLowerCase().replace(/(^|\s)\S/g, function (c) { return c.toUpperCase(); });
+  }
+
+  /* 1. Un nome noto dentro la descrizione: e' la via piu' sicura. */
+  for (var i = 0; i < NOTI.length; i++) {
+    var n = NOTI[i];
+    var re = new RegExp("\\b" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    if (re.test(d)) return n;
+  }
+
+  /* 2. Niente nome noto: provo a ricavarlo dalle prime parole, togliendo
+        il rumore. Prendo solo la parte prima di "Carta N." o simili, che
+        e' dove le banche mettono il nome del negozio. */
+  var testa = d.split(/\bcarta\s+n|\bdata\s+operazione|\baddebito\s+sdd|\bins:/i)[0];
+  testa = testa.replace(RUMORE, " ")
+               .replace(/[*#°]+/g, " ")
+               .replace(/\b\d[\d.,\-\/]*\b/g, " ")   /* numeri e codici */
+               .replace(/\b[a-z0-9]{8,}\b/gi, " ")   /* codici lunghi alfanumerici */
+               .replace(/\s+/g, " ")
+               .trim();
+
+  var parole = testa.split(" ").filter(function (w) { return w.length >= 3; });
+  if (!parole.length) return null;
+
+  /* Due parole bastano a identificare un negozio senza incollarci addosso
+     mezza descrizione. Se resta una parola sola e' corta o generica: lascio
+     perdere, perche' accorpare su una parola sola e' pericoloso. */
+  /* Il ripiego e la parte piu fragile: se ho poco materiale rischio di
+     inventare un nome e accorpare spese scollegate. Preferisco arrendermi.
+     Servono almeno due parole, o una sola ma lunga e distintiva. */
+  if (parole.length === 1 && parole[0].length < 6) return null;
+  var nome = parole.slice(0, 2).join(" ");
+  if (nome.length < 5) return null;
+
+  /* Maiuscole all'inizio, per leggibilita'. */
+  return nome.toLowerCase().replace(/(^|\s)\S/g, function (c) { return c.toUpperCase(); });
+}
+
+/* Il nome sotto cui accorpare un movimento: prima la regola che hai
+   scritto tu, poi quella dedotta, poi il nome che hai dato a mano. */
+function merchOf(e) {
+  if (e.merchant) return e.merchant;
+  for (var i = 0; i < mrules.length; i++) {
+    var r = mrules[i];
+    if ((e.description || "").toLowerCase().indexOf(r.pattern.toLowerCase()) >= 0) return r.merchant;
+  }
+  return guessMerchant(e.description);
+}
+
+/* Il nome da mostrare: quello che hai scelto tu, se c'e. */
+function titleOf(e) { return e.label || e.description || ""; }
+
+/* Rinomina un movimento e, se vuoi, tutti quelli dello stesso esercente. */
+function setMerchant(e, nome, propaga) {
+  nome = (nome || "").trim();
+  e.merchant = nome || null;
+
+  var q = guard(sb.from("expenses").update({ merchant: e.merchant }).eq("id", e.id), "merch");
+
+  if (nome && propaga) {
+    /* Imparo la regola: il pezzo di descrizione piu lungo in comune
+       diventa il modello. Cosi anche i movimenti futuri si accorpano. */
+    var pat = (e.description || "").trim().split(/\s+/).slice(0, 2).join(" ");
+    if (pat.length >= 4) {
+      q = q.then(function () {
+        return sb.from("merchant_rules")
+          .upsert({ pattern: pat, merchant: nome, auto: false }, { onConflict: "pattern" });
+      }).then(function () {
+        /* applico a tutti i movimenti che combaciano */
+        var tocc = expenses.filter(function (x) {
+          return (x.description || "").toLowerCase().indexOf(pat.toLowerCase()) >= 0
+            && x.merchant !== nome;
+        });
+        tocc.forEach(function (x) { x.merchant = nome; });
+        if (!tocc.length) return;
+        return sb.from("expenses").update({ merchant: nome })
+          .in("id", tocc.map(function (x) { return x.id; }))
+          .then(function () { toast("Accorpati " + tocc.length + " movimenti sotto " + nome); });
+      }).then(loadMerchRules);
+    }
+  }
+  return q.then(draw);
+}
 
 /* ==================================================================
    CATEGORIE CHE IMPARANO
@@ -645,6 +857,57 @@ function loadExpenses() {
   }
   return page();
 }
+
+/* ---------- la scheda di un movimento ---------- */
+var edId = null;
+
+function openMove(e) {
+  edId = e.id;
+  $("edOrig").innerHTML = "<b>Come l\u2019ha scritto la banca:</b><br>" + esc(e.description);
+  $("edLabel").value = e.label || "";
+  $("edMerch").value = e.merchant || (guessMerchant(e.description) || "");
+  $("edNotes").value = e.notes || "";
+  $("edProp").checked = true;
+
+  /* i nomi gia usati, per non doverli riscrivere */
+  var nomi = {};
+  expenses.forEach(function (x) { var m = merchOf(x); if (m) nomi[m] = 1; });
+  $("merchList").innerHTML = Object.keys(nomi).sort().map(function (n) {
+    return '<option value="' + esc(n) + '">';
+  }).join("");
+
+  $("edModal").hidden = false;
+}
+function closeMove() { $("edModal").hidden = true; edId = null; }
+$("edX").addEventListener("click", closeMove);
+$("edCanc").addEventListener("click", closeMove);
+$("edModal").addEventListener("click", function (ev) { if (ev.target === $("edModal")) closeMove(); });
+
+$("edSave").addEventListener("click", function () {
+  var e = expenses.filter(function (x) { return x.id === edId; })[0];
+  if (!e) return;
+
+  var nome = $("edMerch").value.trim();
+  var propaga = $("edProp").checked;
+
+  e.label = $("edLabel").value.trim() || null;
+  e.notes = $("edNotes").value.trim() || null;
+
+  $("edSave").disabled = true;
+  guard(sb.from("expenses").update({ label: e.label, notes: e.notes }).eq("id", e.id), "mv")
+    .then(function () { return setMerchant(e, nome, propaga); })
+    .then(function () { closeMove(); toast("Salvato"); })
+    .catch(function () { })
+    .then(function () { $("edSave").disabled = false; });
+});
+
+function loadMerchRules() {
+  return sb.from("merchant_rules").select("*").then(function (r) {
+    if (r.error) { mrules = []; return; }   /* schema5 non ancora eseguito: pazienza */
+    mrules = r.data || [];
+  });
+}
+
 function loadRules() {
   return sb.from("expense_rules").select("*").then(function (r) {
     if (r.error) throw r.error;
@@ -659,7 +922,7 @@ function loadCats() {
 }
 function boot() {
   setStatus("", "Carico…");
-  return Promise.all([loadExpenses(), loadRules(), loadCats()])
+  return Promise.all([loadExpenses(), loadRules(), loadCats(), loadMerchRules()])
     .then(function () {
       /* apro sul mese corrente, se ci sono movimenti */
       var ms = months();

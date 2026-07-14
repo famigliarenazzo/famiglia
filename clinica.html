@@ -12,17 +12,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="famiglia.css">
 <style>
+  /* chip e righe: gli stessi della biblioteca */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 5px 11px;
+  }
+  .rows { margin-top: 16px; }
+  .row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--paper-edge); font-size: 13.5px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { width: 108px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+  .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
   /* ---------- le persone ---------- */
   .people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
   .person{
-    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    background:var(--paper);border:1px solid var(--paper-edge);
     border-radius:16px;padding:16px;cursor:pointer;text-align:center;
     transition:transform .12s,border-color .12s;
   }
-  .person:hover{transform:translateY(-2px);border-color:var(--acc,#7aa2f7)}
+  .person:hover{transform:translateY(-2px);border-color:var(--brass)}
   .person .av{
     width:64px;height:64px;border-radius:50%;margin:0 auto 10px;
-    background:var(--acc,#7aa2f7);color:#0d1117;
+    background:var(--brass);color:var(--on-brass);
     display:flex;align-items:center;justify-content:center;
     font-size:24px;font-weight:700;overflow:hidden;
   }
@@ -35,15 +46,15 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
   .recs{width:100%;border-collapse:collapse;margin-top:10px}
-  .recs th,.recs td{padding:10px 8px;text-align:left;font-size:13px;border-bottom:1px solid var(--line,#2a3550)}
+  .recs th,.recs td{padding:10px 8px;text-align:left;font-size:13px;border-bottom:1px solid var(--paper-edge)}
   .recs th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.55}
   .recs .acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
   .recs .acts button{
-    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+    border:1px solid var(--paper-edge);background:transparent;color:inherit;
     border-radius:8px;padding:5px 8px;font-size:12px;cursor:pointer;
   }
-  .recs .acts button:hover{border-color:var(--acc,#7aa2f7)}
-  .kind{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--acc,#7aa2f7)22;opacity:.9}
+  .recs .acts button:hover{border-color:var(--brass)}
+  .kind{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--brass)22;opacity:.9}
   .empty-note{opacity:.5;font-size:13px;padding:18px 0;text-align:center}
 
   /* anteprima referto */
@@ -51,13 +62,13 @@
   .prev-img{width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#fff}
   .privacy{
     font-size:12px;opacity:.6;margin-top:14px;padding:10px 12px;
-    border:1px dashed var(--line,#2a3550);border-radius:10px;line-height:1.5;
+    border:1px dashed var(--paper-edge);border-radius:10px;line-height:1.5;
   }
 </style>
 </head>
 <body>
 
-<header class="hdr" id="hdr"></header>
+<header class="top" id="top"></header>
 
 <main class="wrap">
   <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
@@ -81,7 +92,7 @@
     </div>
     <div class="sheet-body" id="pBody"></div>
     <div class="sheet-foot">
-      <button class="btn-primary" id="pAddRec">＋ Aggiungi un esame</button>
+      <button class="btn" id="pAddRec">＋ Aggiungi un esame</button>
     </div>
   </div>
 </div>
@@ -93,7 +104,7 @@
     <div class="sheet-body">
       <div class="fld"><label>Foto</label>
         <div style="display:flex;gap:10px;align-items:center">
-          <div class="av" id="eAv" style="width:56px;height:56px;border-radius:50%;background:var(--acc,#7aa2f7);color:#0d1117;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden"></div>
+          <div class="av" id="eAv" style="width:56px;height:56px;border-radius:50%;background:var(--brass);color:var(--on-brass);display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden"></div>
           <input type="file" id="ePhoto" accept="image/*" style="flex:1">
         </div>
       </div>
@@ -125,7 +136,7 @@
     </div>
     <div class="sheet-foot">
       <button class="btn-ghost" id="eCanc">Annulla</button>
-      <button class="btn-primary" id="eSave">Salva</button>
+      <button class="btn" id="eSave">Salva</button>
     </div>
   </div>
 </div>
@@ -154,7 +165,7 @@
     </div>
     <div class="sheet-foot">
       <button class="btn-ghost" id="rCanc">Annulla</button>
-      <button class="btn-primary" id="rSave">Salva</button>
+      <button class="btn" id="rSave">Salva</button>
     </div>
   </div>
 </div>
@@ -185,7 +196,7 @@
    benissimo cosi; qui no.
    ===================================================================== */
 
-$("hdr").innerHTML = toolHeader("La cartella clinica", "");
+$("top").innerHTML = toolHeader("La cartella clinica", "");
 
 var BUCKET = "privati";
 var people = [], records = {}, viewId = null, editId = null, recId = null, newPhoto = null;
