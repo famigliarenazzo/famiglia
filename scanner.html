@@ -24,40 +24,47 @@
   .row .k { width: 108px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
   .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
   .empty{
-    border:1.5px dashed var(--paper-edge);border-radius:16px;
-    padding:44px 20px;text-align:center;
+    border:1.5px dashed var(--forest-line);border-radius:16px;
+    padding:44px 20px;text-align:center;color:var(--paper);
   }
-  .empty h3{margin:0 0 6px;font-size:16px}
-  .empty p{margin:0 0 18px;opacity:.6;font-size:13px}
+  .empty h3{margin:0 0 6px;font-size:16px;color:var(--paper)}
+  .empty p{margin:0 0 18px;opacity:.7;font-size:13px;color:var(--paper)}
   .row-btn{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
   .pages{display:flex;flex-direction:column;gap:12px;margin-top:14px}
   .page-card{
     display:flex;gap:12px;align-items:center;
-    background:var(--paper);border:1px solid var(--paper-edge);
+    background:var(--paper);color:var(--ink);border:1px solid var(--paper-edge);
     border-radius:14px;padding:11px;
   }
   .thumb{width:64px;height:84px;object-fit:cover;border-radius:8px;background:#fff;flex:none}
   .page-meta{flex:1;min-width:0}
-  .page-idx{font-size:11px;opacity:.5;letter-spacing:.08em}
-  .page-name{font-weight:600;font-size:14px;margin:2px 0}
-  .page-sub{font-size:11px;opacity:.45}
-  .auto-badge{font-size:10px;padding:2px 6px;border-radius:999px;background:#2ea04333;color:#3fb950;margin-left:5px}
+  .page-idx{font-size:11px;color:var(--ink-soft);letter-spacing:.08em}
+  .page-name{font-weight:600;font-size:14px;margin:2px 0;color:var(--ink)}
+  .page-sub{font-size:11px;color:var(--ink-soft)}
+  .auto-badge{font-size:10px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--brass) 25%,transparent);color:var(--brass-text);margin-left:5px;font-weight:600}
   .page-actions{display:flex;flex-direction:column;gap:5px}
   .icon-btn{
     width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-    border:1px solid var(--paper-edge);background:transparent;color:inherit;cursor:pointer;
+    border:1px solid var(--paper-edge);background:transparent;color:var(--ink-soft);cursor:pointer;
   }
+  .icon-btn:hover{border-color:var(--brass);color:var(--brass-text)}
   .icon-btn svg{width:15px;height:15px;stroke-width:2;fill:none;stroke:currentColor}
   .icon-btn:disabled{opacity:.25;cursor:default}
 
   /* editor */
   .editor{
-    position:fixed;inset:0;background:var(--forest);z-index:60;
+    position:fixed;inset:0;z-index:60;
+    /* Fondo verde come il resto dell'app: quindi il testo va CHIARO.
+       Senza questo colore, i comandi restavano scuri su scuro e non si
+       leggeva nulla appena caricavi la foto. */
+    background:linear-gradient(180deg,var(--bg-top),var(--forest) 55%);
+    color:var(--paper);
     display:none;flex-direction:column;
   }
   .editor.open{display:flex}
-  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--paper-edge)}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--forest-line);color:var(--paper)}
+  .ed-head b{color:var(--paper)}
   .ed-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
   .canvas-wrap{position:relative;touch-action:none;line-height:0}
   .canvas-wrap canvas{border-radius:8px;display:block}
@@ -68,12 +75,13 @@
     display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;
   }
   .handle .ring{width:16px;height:16px;border-radius:50%;background:var(--brass);border:2.5px solid var(--paper);box-shadow:0 2px 6px rgba(0,0,0,.4)}
-  .ed-foot{padding:14px 16px;border-top:1px solid var(--paper-edge)}
+  .ed-foot{padding:14px 16px;border-top:1px solid var(--forest-line)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px}
   .filter{
-    border:1px solid var(--paper-edge);background:transparent;color:inherit;
+    border:1px solid var(--forest-line);background:transparent;color:var(--paper);
     border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;
   }
+  .filter:hover{border-color:var(--brass)}
   .filter.active{background:var(--brass);border-color:var(--brass);color:var(--on-brass);font-weight:600}
 
   .dock{
@@ -84,16 +92,18 @@
   .saved{display:flex;flex-direction:column;gap:9px;margin-top:12px}
   .doc{
     display:flex;gap:11px;align-items:center;
-    background:var(--paper);border:1px solid var(--paper-edge);
+    background:var(--paper);color:var(--ink);border:1px solid var(--paper-edge);
     border-radius:12px;padding:11px 13px;
   }
+  .doc .acts button{color:var(--ink-soft)}
+  .doc .acts button:hover{border-color:var(--brass);color:var(--brass-text)}
   .doc .t{flex:1;min-width:0}
-  .doc .t b{display:block;font-size:14px}
-  .doc .t span{font-size:11px;opacity:.5}
+  .doc .t b{display:block;font-size:14px;color:var(--ink)}
+  .doc .t span{font-size:11px;color:var(--ink-soft)}
   .doc .acts{display:flex;gap:5px}
   .doc .acts button{border:1px solid var(--paper-edge);background:transparent;color:inherit;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer}
-  .ocr-note{font-size:11px;opacity:.5;margin-top:4px}
-  .empty-note{opacity:.5;font-size:13px;padding:16px 0;text-align:center}
+  .ocr-note{font-size:11px;color:var(--ink-soft);margin-top:4px}
+  .empty-note{opacity:.6;font-size:13px;padding:16px 0;text-align:center;color:var(--paper)}
   .fld select,.fld input{width:100%}
 </style>
 </head>
@@ -123,7 +133,7 @@
     </div>
   </div>
 
-  <h3 style="margin:26px 0 0;font-size:15px">I documenti archiviati</h3>
+  <h3 style="margin:26px 0 0;font-size:15px;color:var(--paper)">I documenti archiviati</h3>
   <div class="saved" id="saved"></div>
 </main>
 

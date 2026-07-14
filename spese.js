@@ -214,10 +214,24 @@ function draw() {
     });
     r.querySelector("[data-edit]").addEventListener("click", function () { openMove(e); });
     r.querySelector("[data-del]").addEventListener("click", function () {
+      /* Prima toglievo la riga dallo schermo e lanciavo la cancellazione
+         senza guardare com'era andata: se il database la rifiutava, il
+         movimento riappariva al primo aggiornamento della pagina.
+         Ora aspetto la risposta, e se fallisce rimetto la riga al suo posto
+         invece di far finta che sia sparita. */
+      var idx = expenses.indexOf(e);
       expenses = expenses.filter(function (x) { return x.id !== id; });
       draw();
-      sb.from("expenses").delete().eq("id", id);
-      toast("Movimento eliminato");
+      sb.from("expenses").delete().eq("id", id).then(function (res) {
+        if (res.error) {
+          console.error(res.error);
+          if (idx >= 0) expenses.splice(idx, 0, e);   /* lo rimetto dov'era */
+          draw();
+          toast("Non sono riuscito a eliminarlo: " + (res.error.message || "errore"));
+          return;
+        }
+        toast("Movimento eliminato");
+      });
     });
   });
 
@@ -627,8 +641,12 @@ function finish(res, name) {
   var known = {};
   expenses.forEach(function (e) { if (e.fingerprint) known[e.fingerprint] = 1; });
 
-  pending = res.moves.map(function (m) {
-    var fp = fingerprint(m);
+  /* Impronte gia numerate: due movimenti identici nello stesso giorno
+     (due ricariche Satispay uguali) restano distinti. */
+  var fps = fingerprints(res.moves);
+
+  pending = res.moves.map(function (m, idx) {
+    var fp = fps[idx];
     return {
       date: m.date,
       description: m.description,
@@ -777,8 +795,19 @@ $("impOk").addEventListener("click", function () {
     var slice = rows.slice(i, i + CH);
     /* onConflict sull'impronta: reimportare lo stesso estratto non duplica */
     sb.from("expenses").upsert(slice, { onConflict: "fingerprint" }).then(function (r) {
-      if (r.error) { console.error(r.error); toast("Errore: " + r.error.message); }
-      else saved += slice.length;
+      if (r.error) {
+        /* Prima l'errore finiva in un avviso che spariva da solo, e il
+           salvataggio proseguiva come se nulla fosse: si perdevano 50
+           movimenti alla volta senza accorgersene. Ora mi fermo e lo dico. */
+        console.error(r.error);
+        b.disabled = false; b.textContent = "Salva i movimenti";
+        warn("Non sono riuscito a salvare i movimenti: " + (r.error.message || "errore")
+          + ". Nessun movimento di questo blocco e stato scritto. "
+          + (saved ? ("Ne erano gia stati salvati " + saved + ".") : ""));
+        if (saved) { loadExpenses().then(draw); }
+        return;                      /* NON proseguo fingendo che sia andata bene */
+      }
+      saved += slice.length;
       i += CH;
       step();
     });
@@ -857,6 +886,96 @@ function loadExpenses() {
   }
   return page();
 }
+
+
+/* ==================================================================
+   ELIMINAZIONE IN BLOCCO
+   Cancellare a uno a uno i movimenti di una prova andata storta e
+   un supplizio. Qui si eliminano per estratto conto, per mese, o tutti.
+   ================================================================== */
+$("purgeBtn").addEventListener("click", function () {
+  var opts = ['<option value="__all">Tutti i movimenti (' + expenses.length + ")</option>"];
+
+  /* per estratto conto caricato */
+  var bySrc = {};
+  expenses.forEach(function (e) { if (e.source) bySrc[e.source] = (bySrc[e.source] || 0) + 1; });
+  Object.keys(bySrc).sort().forEach(function (k) {
+    opts.push('<option value="src:' + esc(k) + '">Solo l\u2019estratto \u00ab' + esc(k) + "\u00bb (" + bySrc[k] + ")</option>");
+  });
+
+  /* per mese */
+  months().forEach(function (k) {
+    var n = expenses.filter(function (e) { return monthKey(e.date) === k; }).length;
+    opts.push('<option value="mon:' + k + '">Solo ' + monthLabel(k) + " (" + n + ")</option>");
+  });
+
+  $("pgWhat").innerHTML = opts.join("");
+  pgUpdate();
+  $("pgModal").hidden = false;
+});
+
+function pgTargets() {
+  var v = $("pgWhat").value;
+  if (v === "__all") return expenses.slice();
+  if (v.indexOf("src:") === 0) {
+    var s = v.slice(4);
+    return expenses.filter(function (e) { return e.source === s; });
+  }
+  if (v.indexOf("mon:") === 0) {
+    var m = v.slice(4);
+    return expenses.filter(function (e) { return monthKey(e.date) === m; });
+  }
+  return [];
+}
+function pgUpdate() {
+  var n = pgTargets().length;
+  $("pgCount").innerHTML = n
+    ? "Sto per eliminare <b>" + n + "</b> " + (n === 1 ? "movimento" : "movimenti") + "."
+    : "Nessun movimento da eliminare.";
+}
+$("pgWhat").addEventListener("change", pgUpdate);
+function pgClose() { $("pgModal").hidden = true; }
+$("pgX").addEventListener("click", pgClose);
+$("pgCanc").addEventListener("click", pgClose);
+$("pgModal").addEventListener("click", function (e) { if (e.target === $("pgModal")) pgClose(); });
+
+$("pgOk").addEventListener("click", function () {
+  var t = pgTargets();
+  if (!t.length) { toast("Niente da eliminare"); return; }
+  if (!confirm("Elimino " + t.length + " movimenti? L\u2019operazione non si annulla.")) return;
+
+  var ids = t.map(function (e) { return e.id; });
+  var b = $("pgOk");
+  b.disabled = true; b.textContent = "Elimino\u2026";
+
+  /* a gruppi: un \"in\" con mille id fa cadere la richiesta */
+  var CH = 100, i = 0, tolti = 0;
+  function step() {
+    if (i >= ids.length) {
+      loadExpenses().then(function () {
+        draw();
+        b.disabled = false; b.textContent = "Elimina";
+        pgClose();
+        toast(tolti + " movimenti eliminati");
+      });
+      return;
+    }
+    var slice = ids.slice(i, i + CH);
+    sb.from("expenses").delete().in("id", slice).then(function (r) {
+      if (r.error) {
+        console.error(r.error);
+        b.disabled = false; b.textContent = "Elimina";
+        toast("Errore: " + (r.error.message || "eliminazione non riuscita"));
+        loadExpenses().then(draw);
+        return;                     /* mi fermo: non fingo che sia andata */
+      }
+      tolti += slice.length;
+      i += CH;
+      step();
+    });
+  }
+  step();
+});
 
 /* ---------- la scheda di un movimento ---------- */
 var edId = null;

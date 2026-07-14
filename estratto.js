@@ -563,16 +563,35 @@ function fmtE(n) {
 
 /* ---------- impronta anti-doppioni ---------- */
 /* Se reimporti lo stesso estratto conto, i movimenti non si duplicano. */
-function fingerprint(m) {
+function fingerprint(m, occorrenza) {
   var s = m.date + "|" + m.amount.toFixed(2) + "|"
     + (m.description || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 60);
-  /* somma di controllo semplice, sufficiente allo scopo */
+
+  /* Due movimenti identici nello stesso giorno possono essere veri: due
+     ricariche Satispay uguali, due caffe' allo stesso bar. Senza questo
+     numero avrebbero la stessa impronta, e il salvataggio andrebbe in
+     errore rifiutando l'intero blocco ("ON CONFLICT" non puo' toccare due
+     volte la stessa riga). Il numero d'ordine li tiene distinti.          */
+  if (occorrenza) s += "|" + occorrenza;
+
   var h = 0;
   for (var i = 0; i < s.length; i++) {
     h = ((h << 5) - h) + s.charCodeAt(i);
     h |= 0;
   }
   return "fp" + (h >>> 0).toString(36) + s.length.toString(36);
+}
+
+/* Le impronte di un intero estratto conto, gia' numerate: i movimenti
+   ripetuti ricevono 2, 3, ... cosi' restano distinti fra loro.           */
+function fingerprints(moves) {
+  var conta = {};
+  return moves.map(function (m) {
+    var base = m.date + "|" + m.amount.toFixed(2) + "|"
+      + (m.description || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 60);
+    conta[base] = (conta[base] || 0) + 1;
+    return fingerprint(m, conta[base] > 1 ? conta[base] : 0);
+  });
 }
 
 /* ---------- categorizzazione ---------- */
@@ -620,7 +639,7 @@ function learnPattern(desc) {
 if (typeof module !== "undefined") {
   module.exports = { parseDate: parseDate, parseAmount: parseAmount, looksAmount: looksAmount,
     pageToLines: pageToLines, lineToMove: lineToMove, parseStatement: parseStatement,
-    fingerprint: fingerprint, categorize: categorize, learnPattern: learnPattern, ruleMatches: ruleMatches,
+    fingerprint: fingerprint, fingerprints: fingerprints, categorize: categorize, learnPattern: learnPattern, ruleMatches: ruleMatches,
     inferSigns: inferSigns, findBalanceColumn: findBalanceColumn,
     findHeaderColumns: findHeaderColumns, findDeclaredTotals: findDeclaredTotals,
     movesByColumns: movesByColumns };
