@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lo scanner · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  .empty{
+    border:1.5px dashed var(--line,#2a3550);border-radius:16px;
+    padding:44px 20px;text-align:center;
+  }
+  .empty h3{margin:0 0 6px;font-size:16px}
+  .empty p{margin:0 0 18px;opacity:.6;font-size:13px}
+  .row-btn{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  .pages{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+  .page-card{
+    display:flex;gap:12px;align-items:center;
+    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    border-radius:14px;padding:11px;
+  }
+  .thumb{width:64px;height:84px;object-fit:cover;border-radius:8px;background:#fff;flex:none}
+  .page-meta{flex:1;min-width:0}
+  .page-idx{font-size:11px;opacity:.5;letter-spacing:.08em}
+  .page-name{font-weight:600;font-size:14px;margin:2px 0}
+  .page-sub{font-size:11px;opacity:.45}
+  .auto-badge{font-size:10px;padding:2px 6px;border-radius:999px;background:#2ea04333;color:#3fb950;margin-left:5px}
+  .page-actions{display:flex;flex-direction:column;gap:5px}
+  .icon-btn{
+    width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;cursor:pointer;
+  }
+  .icon-btn svg{width:15px;height:15px;stroke-width:2;fill:none;stroke:currentColor}
+  .icon-btn:disabled{opacity:.25;cursor:default}
+
+  /* editor */
+  .editor{
+    position:fixed;inset:0;background:var(--bg,#0d1117);z-index:60;
+    display:none;flex-direction:column;
+  }
+  .editor.open{display:flex}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line,#2a3550)}
+  .ed-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
+  .canvas-wrap{position:relative;touch-action:none;line-height:0}
+  .canvas-wrap canvas{border-radius:8px;display:block}
+  #overlay{position:absolute;inset:0;pointer-events:none}
+  #handles{position:absolute;inset:0}
+  .handle{
+    position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;
+    display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;
+  }
+  .handle .ring{width:16px;height:16px;border-radius:50%;background:var(--acc,#7aa2f7);border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .ed-foot{padding:14px 16px;border-top:1px solid var(--line,#2a3550)}
+  .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px}
+  .filter{
+    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+    border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;
+  }
+  .filter.active{background:var(--acc,#7aa2f7);border-color:var(--acc,#7aa2f7);color:#0d1117;font-weight:600}
+
+  .dock{
+    position:sticky;bottom:0;padding:12px 0 16px;
+    background:linear-gradient(transparent,var(--bg,#0d1117) 30%);
+  }
+  .dock-row{display:flex;gap:9px;flex-wrap:wrap}
+  .saved{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+  .doc{
+    display:flex;gap:11px;align-items:center;
+    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    border-radius:12px;padding:11px 13px;
+  }
+  .doc .t{flex:1;min-width:0}
+  .doc .t b{display:block;font-size:14px}
+  .doc .t span{font-size:11px;opacity:.5}
+  .doc .acts{display:flex;gap:5px}
+  .doc .acts button{border:1px solid var(--line,#2a3550);background:transparent;color:inherit;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer}
+  .ocr-note{font-size:11px;opacity:.5;margin-top:4px}
+  .empty-note{opacity:.5;font-size:13px;padding:16px 0;text-align:center}
+  .fld select,.fld input{width:100%}
+</style>
+</head>
+<body>
+
+<header class="hdr" id="hdr"></header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
+
+  <div class="empty" id="emptyState">
+    <h3>Nessuna pagina</h3>
+    <p>Fotografa un documento: i bordi vengono trovati da soli.</p>
+    <div class="row-btn">
+      <button class="btn-primary" id="shootBtn">📷 Fotografa</button>
+      <button class="btn-ghost" id="uploadBtn">🖼️ Dalla galleria</button>
+    </div>
+  </div>
+
+  <div id="pageList" class="pages"></div>
+
+  <div class="dock" id="dock" style="display:none">
+    <div class="dock-row">
+      <button class="btn-ghost" id="addMoreBtn">＋ Aggiungi pagina</button>
+      <button class="btn-ghost" id="pdfBtn">⬇️ Scarica il PDF</button>
+      <button class="btn-primary" id="saveBtn">💾 Salva</button>
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 0;font-size:15px">I documenti archiviati</h3>
+  <div class="saved" id="saved"></div>
+</main>
+
+<!-- editor -->
+<div class="editor" id="editor">
+  <div class="ed-head">
+    <b id="editTitle">Pagina</b>
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" id="autoBtn" style="padding:7px 11px;font-size:12px">✨ Ritrova i bordi</button>
+      <button class="btn-ghost" id="resetCorners" style="padding:7px 11px;font-size:12px">Tutta la foto</button>
+      <button class="btn-ghost" id="closeEditor" style="padding:7px 11px;font-size:12px">✕</button>
+    </div>
+  </div>
+  <div class="ed-stage">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="editCanvas"></canvas>
+      <svg id="overlay"></svg>
+      <div id="handles"></div>
+    </div>
+  </div>
+  <div class="ed-foot">
+    <div class="filters" id="filters">
+      <button class="filter active" data-f="original">Originale</button>
+      <button class="filter" data-f="enhance">Migliora</button>
+      <button class="filter" data-f="gray">Grigio</button>
+      <button class="filter" data-f="bw">Bianco/Nero</button>
+    </div>
+    <button class="btn-primary" id="applyBtn" style="width:100%">Applica</button>
+  </div>
+</div>
+
+<!-- salvataggio -->
+<div class="modal" id="sModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head"><h2>Salva il documento</h2><button class="x" id="sX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Nome</label><input id="sName" placeholder="Bolletta, referto, contratto…"></div>
+
+      <div class="fld">
+        <label>
+          <input type="checkbox" id="sOcr" checked style="width:auto;margin-right:6px">
+          Leggi il testo (così potrai ritrovarlo cercando una parola)
+        </label>
+        <div class="ocr-note">La lettura avviene sul tuo dispositivo. Su documenti lunghi richiede qualche secondo.</div>
+      </div>
+
+      <div class="fld">
+        <label>Metti anche nella cartella clinica di…</label>
+        <select id="sPerson"><option value="">— no, è un documento normale —</option></select>
+      </div>
+      <div class="fld" id="sExamWrap" style="display:none">
+        <label>Nome dell’esame</label><input id="sExam" placeholder="Emocromo completo">
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="sCanc">Annulla</button>
+      <button class="btn-primary" id="sSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="cameraInput" accept="image/*" capture="environment" multiple hidden>
+<input type="file" id="galleryInput" accept="image/*" multiple hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="famiglia.js"></script>
+<script src="bordi.js"></script>
+<script>
+/* =====================================================================
+   LO SCANNER
+
+   Cosa e cambiato rispetto alla prima versione:
+   · i bordi del foglio vengono trovati da soli (bordi.js), invece di
+     doverli trascinare a mano ogni volta
+   · le pagine si possono salvare: prima ricaricando si perdeva tutto
+   · il testo viene letto (OCR) e reso cercabile
+   · una scansione puo finire direttamente nella cartella clinica
+   ===================================================================== */
+
+$("hdr").innerHTML = toolHeader("Lo scanner", "");
+
+var BUCKET = "privati";
+var MAXDIM = 1600;
+var pages = [], docs = [], people = [];
+var editingId = null, editCorners = null, dispScale = 1, dragIdx = -1;
+
+/* ---------------- foto in arrivo ---------------- */
+function loadFiles(fileList) {
+  var files = [].slice.call(fileList).filter(function (f) { return f.type.indexOf("image/") === 0; });
+  if (!files.length) return;
+  var done = 0;
+  files.forEach(function (file) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      var scale = Math.min(1, MAXDIM / Math.max(img.width, img.height));
+      var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+
+      /* Qui la novita: i bordi li cerca il programma.
+         Se non trova niente di convincente, restano quelli della foto
+         e li sposti a mano: meglio non fare nulla che tagliare male. */
+      var auto = detectCorners(c);
+      var page = {
+        id: (crypto.randomUUID ? crypto.randomUUID() : String(Math.random())),
+        src: c, w: w, h: h,
+        corners: auto || [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }],
+        auto: !!auto,
+        filter: "enhance", out: null
+      };
+      renderProcessed(page);
+      pages.push(page);
+      if (++done === files.length) { refresh(); }
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      toast("Immagine non leggibile");
+      if (++done === files.length) refresh();
+    };
+    img.src = url;
+  });
+}
+$("shootBtn").onclick  = function () { $("cameraInput").click(); };
+$("addMoreBtn").onclick= function () { $("cameraInput").click(); };
+$("uploadBtn").onclick = function () { $("galleryInput").click(); };
+$("cameraInput").onchange  = function (e) { loadFiles(e.target.files); e.target.value = ""; };
+$("galleryInput").onchange = function (e) { loadFiles(e.target.files); e.target.value = ""; };
+
+/* ---------------- prospettiva e filtri ---------------- */
+function solve(A, b) {
+  var n = b.length, M = A.map(function (r, i) { return r.concat([b[i]]); });
+  for (var col = 0; col < n; col++) {
+    var p = col;
+    for (var r = col + 1; r < n; r++) if (Math.abs(M[r][col]) > Math.abs(M[p][col])) p = r;
+    var tmp = M[col]; M[col] = M[p]; M[p] = tmp;
+    var d = M[col][col];
+    for (var c = col; c <= n; c++) M[col][c] /= d;
+    for (var r2 = 0; r2 < n; r2++) {
+      if (r2 === col) continue;
+      var f = M[r2][col];
+      for (var c2 = col; c2 <= n; c2++) M[r2][c2] -= f * M[col][c2];
+    }
+  }
+  return M.map(function (r) { return r[n]; });
+}
+function homography(from, to) {
+  var A = [], b = [];
+  for (var i = 0; i < 4; i++) {
+    var x = from[i].x, y = from[i].y, u = to[i].x, v = to[i].y;
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+  }
+  var h = solve(A, b);
+  return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+}
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function warp(srcCanvas, corners) {
+  var tl = corners[0], tr = corners[1], br = corners[2], bl = corners[3];
+  var outW = Math.max(2, Math.round(Math.max(dist(tl, tr), dist(bl, br))));
+  var outH = Math.max(2, Math.round(Math.max(dist(tl, bl), dist(tr, br))));
+  var rect = [{ x: 0, y: 0 }, { x: outW, y: 0 }, { x: outW, y: outH }, { x: 0, y: outH }];
+  var H = homography(rect, corners);
+
+  var sctx = srcCanvas.getContext("2d");
+  var sdata = sctx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+  var sp = sdata.data, sw = srcCanvas.width, sh = srcCanvas.height;
+  var out = document.createElement("canvas"); out.width = outW; out.height = outH;
+  var odata = new ImageData(outW, outH), op = odata.data;
+
+  for (var y = 0; y < outH; y++) {
+    for (var x = 0; x < outW; x++) {
+      var den = H[6] * x + H[7] * y + H[8];
+      var sx = (H[0] * x + H[1] * y + H[2]) / den;
+      var sy = (H[3] * x + H[4] * y + H[5]) / den;
+      var o = (y * outW + x) * 4;
+      if (sx < 0 || sy < 0 || sx >= sw - 1 || sy >= sh - 1) {
+        op[o] = 245; op[o + 1] = 241; op[o + 2] = 233; op[o + 3] = 255; continue;
+      }
+      var x0 = sx | 0, y0 = sy | 0, fx = sx - x0, fy = sy - y0;
+      var i00 = (y0 * sw + x0) * 4, i10 = i00 + 4, i01 = i00 + sw * 4, i11 = i01 + 4;
+      for (var k = 0; k < 3; k++) {
+        var top = sp[i00 + k] * (1 - fx) + sp[i10 + k] * fx;
+        var bot = sp[i01 + k] * (1 - fx) + sp[i11 + k] * fx;
+        op[o + k] = top * (1 - fy) + bot * fy;
+      }
+      op[o + 3] = 255;
+    }
+  }
+  out.getContext("2d").putImageData(odata, 0, 0);
+  return out;
+}
+
+function applyFilter(canvas, filter) {
+  if (filter === "original") return canvas;
+  var ctx = canvas.getContext("2d");
+  var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  var d = img.data, n = canvas.width * canvas.height, i, v;
+
+  if (filter === "gray") {
+    for (i = 0; i < d.length; i += 4) {
+      var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      d[i] = d[i + 1] = d[i + 2] = g;
+    }
+  } else if (filter === "enhance") {
+    for (var ch = 0; ch < 3; ch++) {
+      var hist = new Uint32Array(256);
+      for (i = ch; i < d.length; i += 4) hist[d[i]]++;
+      var lo = 0, hi = 255, acc = 0, loT = n * 0.02, hiT = n * 0.98;
+      for (v = 0; v < 256; v++) { acc += hist[v]; if (acc > loT) { lo = v; break; } }
+      acc = 0;
+      for (v = 255; v >= 0; v--) { acc += hist[v]; if (acc > n - hiT) { hi = v; break; } }
+      var range = Math.max(1, hi - lo);
+      for (i = ch; i < d.length; i += 4) {
+        var vv = (d[i] - lo) * 255 / range;
+        d[i] = vv < 0 ? 0 : vv > 255 ? 255 : vv;
+      }
+    }
+  } else if (filter === "bw") {
+    var w = canvas.width, h = canvas.height;
+    var gray = new Float32Array(n);
+    for (i = 0, v = 0; i < d.length; i += 4, v++) {
+      gray[v] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    }
+    var integ = new Float64Array((w + 1) * (h + 1));
+    for (var yy = 1; yy <= h; yy++) {
+      var rs = 0;
+      for (var xx = 1; xx <= w; xx++) {
+        rs += gray[(yy - 1) * w + (xx - 1)];
+        integ[yy * (w + 1) + xx] = integ[(yy - 1) * (w + 1) + xx] + rs;
+      }
+    }
+    var S = Math.max(8, Math.floor(w / 16)), T = 0.15;
+    for (var y2 = 0; y2 < h; y2++) {
+      var y1 = Math.max(0, y2 - S), y3 = Math.min(h - 1, y2 + S);
+      for (var x2 = 0; x2 < w; x2++) {
+        var x1 = Math.max(0, x2 - S), x3 = Math.min(w - 1, x2 + S);
+        var cnt = (x3 - x1) * (y3 - y1);
+        var sum = integ[(y3 + 1) * (w + 1) + (x3 + 1)] - integ[y1 * (w + 1) + (x3 + 1)]
+                - integ[(y3 + 1) * (w + 1) + x1] + integ[y1 * (w + 1) + x1];
+        var j = y2 * w + x2, o2 = j * 4;
+        var val = (gray[j] * cnt <= sum * (1 - T)) ? 0 : 255;
+        d[o2] = d[o2 + 1] = d[o2 + 2] = val;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas;
+}
+
+function renderProcessed(page) {
+  var warped = warp(page.src, page.corners);
+  var filtered = applyFilter(warped, page.filter);
+  page.outCanvas = filtered;
+  page.out = filtered.toDataURL(page.filter === "bw" ? "image/png" : "image/jpeg", 0.92);
+  page.outW = filtered.width; page.outH = filtered.height;
+}
+
+/* ---------------- elenco pagine ---------------- */
+function refresh() {
+  var has = pages.length > 0;
+  $("emptyState").style.display = has ? "none" : "block";
+  $("dock").style.display = has ? "block" : "none";
+
+  var list = $("pageList"); list.innerHTML = "";
+  pages.forEach(function (p, i) {
+    var nomi = { original: "Originale", enhance: "Migliorato", gray: "Grigio", bw: "Bianco/Nero" };
+    var card = document.createElement("div");
+    card.className = "page-card";
+    card.innerHTML =
+      '<img class="thumb" src="' + p.out + '" alt="">'
+      + '<div class="page-meta">'
+      + '<div class="page-idx">PAGINA ' + (i + 1) + "</div>"
+      + '<div class="page-name">' + nomi[p.filter]
+      + (p.auto ? '<span class="auto-badge">bordi trovati</span>' : "") + "</div>"
+      + '<div class="page-sub">' + p.outW + "×" + p.outH + " px</div>"
+      + '<button class="btn-ghost" data-edit="' + p.id + '" style="margin-top:7px;padding:5px 10px;font-size:12px">Modifica</button>'
+      + "</div>"
+      + '<div class="page-actions">'
+      + '<button class="icon-btn" data-up="' + p.id + '"' + (i === 0 ? " disabled" : "") + '><svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></button>'
+      + '<button class="icon-btn" data-down="' + p.id + '"' + (i === pages.length - 1 ? " disabled" : "") + '><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>'
+      + '<button class="icon-btn" data-del="' + p.id + '"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>'
+      + "</div>";
+    list.appendChild(card);
+  });
+}
+$("pageList").addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) return;
+  var idx = function (id) { return pages.findIndex(function (p) { return p.id === id; }); };
+  if (b.dataset.edit) openEditor(b.dataset.edit);
+  else if (b.dataset.del) { pages = pages.filter(function (p) { return p.id !== b.dataset.del; }); refresh(); }
+  else if (b.dataset.up) { var i = idx(b.dataset.up); if (i > 0) { var t = pages[i - 1]; pages[i - 1] = pages[i]; pages[i] = t; refresh(); } }
+  else if (b.dataset.down) { var j = idx(b.dataset.down); if (j < pages.length - 1) { var u = pages[j + 1]; pages[j + 1] = pages[j]; pages[j] = u; refresh(); } }
+});
+
+/* ---------------- editor ---------------- */
+function openEditor(id) {
+  var p = pages.filter(function (x) { return x.id === id; })[0];
+  if (!p) return;
+  editingId = id;
+  editCorners = p.corners.map(function (c) { return { x: c.x, y: c.y }; });
+  $("editTitle").textContent = "Pagina " + (pages.indexOf(p) + 1);
+  document.querySelectorAll(".filter").forEach(function (f) {
+    f.classList.toggle("active", f.dataset.f === p.filter);
+  });
+  $("editor").classList.add("open");
+  requestAnimationFrame(function () { drawEditor(p); });
+}
+function drawEditor(p) {
+  var canvas = $("editCanvas"), wrap = $("canvasWrap");
+  var stage = canvas.parentElement.parentElement;
+  var maxW = stage.clientWidth - 36, maxH = stage.clientHeight - 36;
+  dispScale = Math.min(maxW / p.w, maxH / p.h, 1);
+  var dw = Math.round(p.w * dispScale), dh = Math.round(p.h * dispScale);
+  canvas.width = dw; canvas.height = dh;
+  canvas.getContext("2d").drawImage(p.src, 0, 0, dw, dh);
+  wrap.style.width = dw + "px"; wrap.style.height = dh + "px";
+  var ov = $("overlay");
+  ov.setAttribute("viewBox", "0 0 " + dw + " " + dh);
+  ov.setAttribute("width", dw); ov.setAttribute("height", dh);
+  renderHandles();
+}
+function renderHandles() {
+  var pts = editCorners.map(function (c) { return { x: c.x * dispScale, y: c.y * dispScale }; });
+  var poly = pts.map(function (p) { return p.x + "," + p.y; }).join(" ");
+  $("overlay").innerHTML = '<polygon points="' + poly + '" fill="rgba(122,162,247,0.12)" stroke="#7aa2f7" stroke-width="1.7" stroke-dasharray="6 4"/>';
+  var box = $("handles"); box.innerHTML = "";
+  pts.forEach(function (pt, i) {
+    var h = document.createElement("div");
+    h.className = "handle";
+    h.style.left = pt.x + "px"; h.style.top = pt.y + "px";
+    h.innerHTML = '<span class="ring"></span>';
+    h.addEventListener("pointerdown", function (ev) { startDrag(ev, i); });
+    box.appendChild(h);
+  });
+}
+function startDrag(ev, i) {
+  ev.preventDefault(); dragIdx = i;
+  window.addEventListener("pointermove", onDrag);
+  window.addEventListener("pointerup", endDrag);
+}
+function onDrag(ev) {
+  if (dragIdx < 0) return;
+  var rect = $("editCanvas").getBoundingClientRect();
+  var p = pages.filter(function (z) { return z.id === editingId; })[0];
+  var x = (ev.clientX - rect.left) / dispScale;
+  var y = (ev.clientY - rect.top) / dispScale;
+  editCorners[dragIdx] = {
+    x: Math.max(0, Math.min(p.w, x)),
+    y: Math.max(0, Math.min(p.h, y))
+  };
+  renderHandles();
+}
+function endDrag() {
+  dragIdx = -1;
+  window.removeEventListener("pointermove", onDrag);
+  window.removeEventListener("pointerup", endDrag);
+}
+$("filters").addEventListener("click", function (e) {
+  var b = e.target.closest(".filter"); if (!b) return;
+  document.querySelectorAll(".filter").forEach(function (f) { f.classList.remove("active"); });
+  b.classList.add("active");
+});
+/* Ritrova i bordi da solo, anche a mano: se la prima volta ha sbagliato,
+   dopo aver spostato le maniglie puoi sempre farglieli ricercare. */
+$("autoBtn").onclick = function () {
+  var p = pages.filter(function (z) { return z.id === editingId; })[0];
+  if (!p) return;
+  var auto = detectCorners(p.src);
+  if (!auto) { toast("Non riesco a trovare i bordi: spostali a mano"); return; }
+  editCorners = auto;
+  p.auto = true;
+  renderHandles();
+  toast("Bordi ritrovati");
+};
+$("resetCorners").onclick = function () {
+  var p = pages.filter(function (z) { return z.id === editingId; })[0];
+  if (!p) return;
+  editCorners = [{ x: 0, y: 0 }, { x: p.w, y: 0 }, { x: p.w, y: p.h }, { x: 0, y: p.h }];
+  p.auto = false;
+  renderHandles();
+};
+$("closeEditor").onclick = function () { $("editor").classList.remove("open"); };
+$("applyBtn").onclick = function () {
+  var p = pages.filter(function (z) { return z.id === editingId; })[0];
+  if (!p) return;
+  p.corners = editCorners.map(function (c) { return { x: c.x, y: c.y }; });
+  p.filter = document.querySelector(".filter.active").dataset.f;
+  renderProcessed(p);
+  $("editor").classList.remove("open");
+  refresh();
+  toast("Pagina aggiornata");
+};
+
+/* ---------------- il PDF ---------------- */
+function buildPdf() {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = null, A4 = { w: 210, h: 297 }, margin = 8;
+  pages.forEach(function (p, i) {
+    var land = p.outW > p.outH;
+    var pw = land ? A4.h : A4.w, ph = land ? A4.w : A4.h;
+    if (i === 0) doc = new jsPDF({ orientation: land ? "landscape" : "portrait", unit: "mm", format: "a4" });
+    else doc.addPage("a4", land ? "landscape" : "portrait");
+    var availW = pw - margin * 2, availH = ph - margin * 2;
+    var r = Math.min(availW / p.outW, availH / p.outH);
+    var w = p.outW * r, h = p.outH * r;
+    doc.addImage(p.out, p.filter === "bw" ? "PNG" : "JPEG",
+      (pw - w) / 2, (ph - h) / 2, w, h, undefined, "FAST");
+  });
+  return doc;
+}
+$("pdfBtn").onclick = function () {
+  if (!pages.length) return;
+  try {
+    buildPdf().save("scansione_" + new Date().toISOString().slice(0, 10) + ".pdf");
+    toast("PDF scaricato");
+  } catch (e) { console.error(e); toast("Errore nel creare il PDF"); }
+};
+
+/* ---------------- la lettura del testo (OCR) ----------------
+   Tesseract viene caricato solo quando serve davvero: pesa parecchio,
+   e non ha senso farlo scaricare a chi vuole solo fotografare. */
+var ocrReady = null;
+function loadOcr() {
+  if (ocrReady) return ocrReady;
+  ocrReady = new Promise(function (res, rej) {
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload = function () { res(window.Tesseract); };
+    s.onerror = function () { rej(new Error("OCR non disponibile")); };
+    document.head.appendChild(s);
+  });
+  return ocrReady;
+}
+function readText(onProgress) {
+  return loadOcr().then(function (T) {
+    var testi = [];
+    /* una pagina alla volta: due insieme sul telefono lo bloccano */
+    return pages.reduce(function (chain, p, i) {
+      return chain.then(function () {
+        if (onProgress) onProgress(i + 1, pages.length);
+        return T.recognize(p.out, "ita").then(function (r) {
+          testi.push((r.data && r.data.text ? r.data.text : "").trim());
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      return testi.join("\n\n").trim();
+    });
+  });
+}
+
+/* ---------------- salvataggio ---------------- */
+$("saveBtn").onclick = function () {
+  if (!pages.length) return;
+  $("sName").value = "Documento del " + new Date().toLocaleDateString("it-IT");
+  $("sPerson").innerHTML = '<option value="">— no, è un documento normale —</option>'
+    + people.map(function (p) { return '<option value="' + p.id + '">' + esc(p.name) + "</option>"; }).join("");
+  $("sExamWrap").style.display = "none";
+  $("sModal").hidden = false;
+};
+$("sPerson").addEventListener("change", function () {
+  $("sExamWrap").style.display = this.value ? "block" : "none";
+  if (this.value && !$("sExam").value) $("sExam").value = $("sName").value;
+});
+function closeSave() { $("sModal").hidden = true; }
+$("sX").onclick = closeSave;
+$("sCanc").onclick = closeSave;
+
+$("sSave").onclick = function () {
+  var name = $("sName").value.trim() || "Documento";
+  var personId = $("sPerson").value;
+  var wantOcr = $("sOcr").checked;
+  var btn = $("sSave");
+  btn.disabled = true;
+
+  var pdfBlob;
+  try {
+    pdfBlob = buildPdf().output("blob");
+  } catch (e) {
+    toast("Errore nel creare il PDF"); btn.disabled = false; return;
+  }
+
+  var testo = "";
+  var step = wantOcr
+    ? (btn.textContent = "Leggo il testo…",
+       readText(function (i, n) { btn.textContent = "Leggo… " + i + "/" + n; })
+         .then(function (t) { testo = t; })
+         .catch(function () { toast("Testo non letto, salvo comunque"); }))
+    : Promise.resolve();
+
+  step.then(function () {
+    btn.textContent = "Salvo…";
+    var path = "scansioni/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + ".pdf";
+    return sb.storage.from(BUCKET).upload(path, pdfBlob, { contentType: "application/pdf" })
+      .then(function (r) {
+        if (r.error) throw r.error;
+        return guard(sb.from("scans").insert({
+          title: name, pages: pages.length, path: path,
+          text_content: testo || null
+        }), "scan").then(function () { return path; });
+      });
+  }).then(function (path) {
+    /* Se e un referto, lo metto anche nella cartella clinica: lo stesso
+       file, nessuna copia doppia. */
+    if (!personId) return;
+    return guard(sb.from("medical_records").insert({
+      person_id: personId,
+      title: $("sExam").value.trim() || name,
+      exam_date: new Date().toISOString().slice(0, 10),
+      path: path, mime: "application/pdf",
+      notes: "Scansionato con lo scanner"
+    }), "med");
+  }).then(function () {
+    closeSave();
+    pages = [];
+    refresh();
+    toast(personId ? "Salvato, anche nella cartella clinica" : "Documento salvato");
+    return load();
+  }).catch(function (e) {
+    console.error(e);
+    toast("Non sono riuscito a salvare");
+  }).then(function () {
+    btn.disabled = false;
+    btn.textContent = "Salva";
+  });
+};
+
+/* ---------------- i documenti archiviati ---------------- */
+function drawDocs() {
+  if (!docs.length) {
+    $("saved").innerHTML = '<p class="empty-note">Nessun documento archiviato.</p>';
+    return;
+  }
+  $("saved").innerHTML = docs.map(function (d) {
+    var quando = String(d.created_at || "").slice(0, 10).split("-").reverse().join("/");
+    return '<div class="doc">'
+      + '<div class="t"><b>' + esc(d.title) + "</b>"
+      + "<span>" + quando + " · " + d.pages + (d.pages === 1 ? " pagina" : " pagine")
+      + (d.text_content ? " · testo cercabile" : "") + "</span></div>"
+      + '<div class="acts">'
+      + '<button data-open="' + d.id + '">Apri</button>'
+      + '<button data-del="' + d.id + '">Elimina</button>'
+      + "</div></div>";
+  }).join("");
+
+  $("saved").querySelectorAll("[data-open]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var d = docs.filter(function (x) { return x.id === b.dataset.open; })[0];
+      if (!d) return;
+      /* collegamento firmato: vale un'ora, poi scade */
+      sb.storage.from(BUCKET).createSignedUrl(d.path, 3600).then(function (r) {
+        if (r.error) { toast("Non riesco ad aprirlo"); return; }
+        window.open(r.data.signedUrl, "_blank");
+      });
+    });
+  });
+  $("saved").querySelectorAll("[data-del]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var d = docs.filter(function (x) { return x.id === b.dataset.del; })[0];
+      if (!d || !confirm("Elimino «" + d.title + "»?")) return;
+      sb.storage.from(BUCKET).remove([d.path]).then(function () {
+        return guard(sb.from("scans").delete().eq("id", d.id), "del");
+      }).then(function () { toast("Eliminato"); return load(); });
+    });
+  });
+}
+
+function load() {
+  return Promise.all([
+    sb.from("scans").select("*").order("created_at", { ascending: false }),
+    sb.from("people").select("id,name").order("pos")
+  ]).then(function (r) {
+    if (r[0].error) throw r[0].error;
+    docs = r[0].data || [];
+    people = (r[1].data) || [];
+    setStatus("ok", docs.length
+      ? ("<b>" + docs.length + "</b> " + (docs.length === 1 ? "documento archiviato" : "documenti archiviati"))
+      : "Nessun documento archiviato");
+    drawDocs();
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("err", "Non riesco a leggere i dati. Hai eseguito <b>schema4.sql</b>?");
+  });
+}
+
+requireAuth().then(load).then(refresh);
+</script>
+</body>
+</html>

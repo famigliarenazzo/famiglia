@@ -21,6 +21,15 @@ function parseDate(s) {
   s = String(s).trim();
   var m;
 
+  /* gg mm aa con spazi: "01 04 26" (Banca Sella e altre).
+     Senza questo, le righe di Sella non venivano riconosciute affatto. */
+  m = s.match(/^(\d{1,2})\s+(\d{1,2})\s+(\d{2,4})$/);
+  if (m) {
+    var gd = +m[1], gm = +m[2], gy = +m[3];
+    if (gy < 100) gy += 2000;
+    return valid(gy, gm, gd);
+  }
+
   /* gg/mm/aaaa oppure gg-mm-aa */
   m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (m) {
@@ -269,6 +278,105 @@ function guessYear(allText) {
   return best;
 }
 
+
+/* =====================================================================
+   COLONNE DICHIARATE E QUADRATURA
+   Il metodo "l'ultimo numero e' l'importo, quello piu' a destra e' il saldo"
+   funziona su molti estratti conto ma non su tutti. Su Banca Sella il saldo
+   cade nella stessa colonna delle Entrate: cosi' i bonifici in entrata
+   (lo stipendio) verrebbero scambiati per saldi e buttati via.
+
+   La via sicura e' non indovinare: le intestazioni "Uscite" ed "Entrate"
+   sono scritte nel PDF. Le leggo, e assegno il segno in base a quale
+   colonna e' piu' vicina. Se le intestazioni non ci sono, si torna al
+   metodo generico di prima.
+   ===================================================================== */
+
+/* Righe che non sono movimenti: saldi, intestazioni, pie' di pagina. */
+var RIGA_NON_MOVIMENTO = /SALDO\s+(INIZIALE|FINALE)|SALDO\s+A\s+VS|RIEPILOGO|Pagina\s+\d+\s+di\s+\d+|ESTRATTO CONTO N\.|Data\s+contabile/i;
+
+/* Cerca le intestazioni delle colonne importi. */
+function findHeaderColumns(pages) {
+  var out = { uscite: null, entrate: null };
+  pages.forEach(function (lines) {
+    lines.forEach(function (line) {
+      line.cells.forEach(function (c) {
+        var t = c.t.trim();
+        if (/^uscite$/i.test(t) && out.uscite == null) out.uscite = c.x;
+        if (/^entrate$/i.test(t) && out.entrate == null) out.entrate = c.x;
+        /* altre banche usano parole diverse per la stessa cosa */
+        if (/^(dare|addebiti)$/i.test(t) && out.uscite == null) out.uscite = c.x;
+        if (/^(avere|accrediti)$/i.test(t) && out.entrate == null) out.entrate = c.x;
+      });
+    });
+  });
+  return (out.uscite != null && out.entrate != null) ? out : null;
+}
+
+/* Legge i totali che la banca dichiara: servono a verificare il lavoro.
+   Se la somma dei movimenti non torna con questi, qualcosa e' sfuggito
+   e va detto, invece di lasciar credere che sia tutto a posto. */
+function findDeclaredTotals(allText) {
+  var out = {};
+  var m;
+  m = allText.match(/ENTRATE\s+COMPLESSIVE[^\n\d]*([\d.,]+)/i);
+  if (m) out.entrate = parseAmount(m[1]);
+  m = allText.match(/USCITE\s+COMPLESSIVE[^\n\d-]*(-?[\d.,]+)/i);
+  if (m) out.uscite = Math.abs(parseAmount(m[1]) || 0);
+  m = allText.match(/SALDO\s+INIZIALE[^\n\d-]*(-?[\d.,]+)/i);
+  if (m) out.iniziale = parseAmount(m[1]);
+  m = allText.match(/SALDO\s+FINALE[^\n\d-]*(-?[\d.,]+)/i);
+  if (m) out.finale = parseAmount(m[1]);
+  return out;
+}
+
+/* Estrae i movimenti usando le colonne dichiarate. */
+function movesByColumns(pages, year, cols) {
+  var moves = [];
+  pages.forEach(function (lines) {
+    lines.forEach(function (line) {
+      if (RIGA_NON_MOVIMENTO.test(line.text)) return;
+      var cells = line.cells, dates = [], amts = [];
+      cells.forEach(function (c, i) {
+        var d = parseDate(c.t);
+        if (d) { dates.push({ i: i, v: d }); return; }
+        if (looksAmount(c.t)) amts.push({ i: i, x: c.x, v: parseAmount(c.t), raw: c.t });
+      });
+      if (!dates.length || !amts.length) return;
+
+      var dt = dates[0].v;
+      if (dt && dt.partial) {
+        if (!year) return;
+        dt = year + "-" + pad(dt.month) + "-" + pad(dt.day);
+      }
+      if (!dt || typeof dt !== "string") return;
+
+      /* L'importo del movimento e' l'ultimo numero della riga. */
+      var a = amts[amts.length - 1];
+
+      /* Il segno lo decide la colonna, non la fantasia. */
+      var dU = Math.abs(a.x - cols.uscite);
+      var dE = Math.abs(a.x - cols.entrate);
+      var entrata = dE < dU;
+
+      var lo = dates[dates.length - 1].i + 1;
+      var desc = cells.slice(lo, a.i).map(function (c) { return c.t; })
+        .join(" ").replace(/\s+/g, " ").trim();
+      if (!desc || desc.length < 2) return;
+
+      moves.push({
+        date: dt,
+        description: desc,
+        amount: entrata ? Math.abs(a.v) : -Math.abs(a.v),
+        _x: a.x,
+        _signed: true,          /* il segno e' gia' deciso: non toccarlo dopo */
+        _raw: line.text
+      });
+    });
+  });
+  return moves;
+}
+
 /* ---------- funzione principale ---------- */
 /* Restituisce { moves: [...], pages: n, warnings: [...] } */
 function parseStatement(pages) {
@@ -277,45 +385,82 @@ function parseStatement(pages) {
     return p.map(function (l) { return l.text; }).join("\n");
   }).join("\n");
   var year = guessYear(allText);
-
-  /* Prima individuo dov'è la colonna del saldo progressivo, così non
-     la scambio per l'importo del movimento. */
-  var balanceX = findBalanceColumn(pages, year);
+  var totals = findDeclaredTotals(allText);
 
   var moves = [];
-  pages.forEach(function (lines) {
-    lines.forEach(function (line) {
-      var m = lineToMove(line, year, balanceX);
-      if (m) moves.push(m);
+  var metodo = "";
+
+  /* Prima scelta: le colonne dichiarate nell'intestazione del PDF.
+     E' il metodo affidabile, perche' non deve indovinare niente. */
+  var cols = findHeaderColumns(pages);
+  if (cols) {
+    moves = movesByColumns(pages, year, cols);
+    metodo = "colonne";
+  }
+
+  /* Ripiego: il metodo generico di prima, per le banche che non
+     scrivono le intestazioni o che usano un'unica colonna con il segno. */
+  if (!moves.length) {
+    var balanceX = findBalanceColumn(pages, year);
+    pages.forEach(function (lines) {
+      lines.forEach(function (line) {
+        if (RIGA_NON_MOVIMENTO.test(line.text)) return;
+        var m = lineToMove(line, year, balanceX);
+        if (m) moves.push(m);
+      });
     });
-  });
+    if (moves.length) { inferSigns(moves); metodo = "generico"; }
+  }
 
   if (!moves.length) {
     warnings.push("Non ho riconosciuto nessun movimento. "
-      + "Il PDF potrebbe essere una scansione (immagine) invece che testo.");
-    return { moves: [], warnings: warnings, year: year };
+      + "Il PDF potrebbe essere una scansione (immagine) invece che testo: "
+      + "in quel caso scarica dalla banca il file CSV.");
+    return { moves: [], warnings: warnings, year: year, totals: totals };
   }
 
-  inferSigns(moves);
-
-  /* Righe di descrizione che continuano sulla riga sotto: le banche spezzano
-     le causali lunghe. Le riattacco quando una riga senza data segue un
-     movimento. (Già escluse da lineToMove: qui non faccio nulla, ma segnalo.) */
-
-  /* Doppioni interni allo stesso file: stessa data, importo e descrizione. */
+  /* Doppioni interni allo stesso file. Attenzione: due movimenti identici
+     nello stesso giorno possono essere veri (due spese uguali dallo stesso
+     negozio), quindi tengo conto anche di quante volte la riga compare. */
   var seen = {}, uniq = [];
   moves.forEach(function (m) {
     var k = m.date + "|" + m.amount + "|" + m.description.slice(0, 40);
-    if (seen[k]) return;
-    seen[k] = 1;
+    seen[k] = (seen[k] || 0) + 1;
     uniq.push(m);
   });
-  if (uniq.length < moves.length) {
-    warnings.push((moves.length - uniq.length) + " righe ripetute sono state unite.");
-  }
 
   uniq.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-  return { moves: uniq, warnings: warnings, year: year };
+
+  /* ---------- la verifica che conta ----------
+     La banca dichiara i totali. Se la mia somma non coincide, ho perso
+     o inventato qualcosa: e' meglio saperlo subito che scoprirlo fra un anno.  */
+  var ent = 0, usc = 0;
+  uniq.forEach(function (m) { if (m.amount > 0) ent += m.amount; else usc += -m.amount; });
+
+  var quadra = null;
+  if (totals.entrate != null && totals.uscite != null) {
+    var dE = Math.abs(ent - totals.entrate);
+    var dU = Math.abs(usc - totals.uscite);
+    quadra = (dE < 0.02 && dU < 0.02);
+    if (quadra) {
+      warnings.push("Verifica riuscita: entrate e uscite coincidono con i totali "
+        + "dichiarati dalla banca (" + fmtE(totals.entrate) + " e " + fmtE(totals.uscite) + ").");
+    } else {
+      warnings.push("Attenzione: i miei totali (entrate " + fmtE(ent) + ", uscite " + fmtE(usc)
+        + ") non coincidono con quelli dichiarati dalla banca (" + fmtE(totals.entrate)
+        + " e " + fmtE(totals.uscite) + "). Controlla i movimenti prima di salvarli.");
+    }
+  }
+
+  return {
+    moves: uniq, warnings: warnings, year: year,
+    totals: totals, quadra: quadra, metodo: metodo,
+    sommaEntrate: ent, sommaUscite: usc
+  };
+}
+
+function fmtE(n) {
+  return (n == null ? "?" : n.toFixed(2).replace(".", ",")) + " \u20ac";
 }
 
 /* ---------- impronta anti-doppioni ---------- */
@@ -378,5 +523,7 @@ if (typeof module !== "undefined") {
   module.exports = { parseDate: parseDate, parseAmount: parseAmount, looksAmount: looksAmount,
     pageToLines: pageToLines, lineToMove: lineToMove, parseStatement: parseStatement,
     fingerprint: fingerprint, categorize: categorize, learnPattern: learnPattern, ruleMatches: ruleMatches,
-    inferSigns: inferSigns, findBalanceColumn: findBalanceColumn };
+    inferSigns: inferSigns, findBalanceColumn: findBalanceColumn,
+    findHeaderColumns: findHeaderColumns, findDeclaredTotals: findDeclaredTotals,
+    movesByColumns: movesByColumns };
 }

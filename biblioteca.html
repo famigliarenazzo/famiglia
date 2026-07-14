@@ -272,6 +272,11 @@
       <button class="x" id="bvClose">✕</button>
     </div>
     <div class="sheet-body" id="bvBody"></div>
+    <div class="sheet-foot bv-actions">
+      <button class="btn-ghost" id="bvShare">⤴️ Condividi</button>
+      <button class="btn-ghost" id="bvCopy">📋 Copia scheda</button>
+      <button class="btn-ghost" id="bvVinted">🏷️ Annuncio Vinted</button>
+    </div>
   </div>
 </div>
 
@@ -621,6 +626,128 @@ function openBook(id) {
 
   $("bvModal").hidden = false;
 }
+
+/* =====================================================================
+   CONDIVIDERE UN LIBRO
+   Tre modi: il pannello di condivisione del telefono, la copia negli
+   appunti, e l'annuncio gia pronto per Vinted.
+   ===================================================================== */
+
+/* La scheda del libro in testo semplice, da mandare a qualcuno. */
+function bookAsText(b) {
+  var L = [];
+  L.push(b.title || "Senza titolo");
+  if (b.subtitle) L.push(b.subtitle);
+  var by = authorsOf(b);
+  if (by) L.push("di " + by);
+  L.push("");
+  var ed = [b.publisher, b.year].filter(Boolean).join(", ");
+  if (ed) L.push("Editore: " + ed);
+  if (b.series) L.push("Collana: " + b.series);
+  var g = genresOf(b);
+  if (g.length) L.push("Genere: " + g.join(", "));
+  if (b.age) L.push("Eta: " + b.age);
+  if (b.pages) L.push("Pagine: " + b.pages);
+  if (b.condition) L.push("Condizioni: " + b.condition);
+  if (b.isbn) L.push("ISBN: " + b.isbn);
+  var rd = Object.keys(readsOf(b));
+  if (rd.length) L.push("Letto da: " + rd.join(", "));
+  if (b.notes) { L.push(""); L.push(b.notes); }
+  return L.join("\n");
+}
+
+/* Il testo dell'annuncio per Vinted: titolo, descrizione, prezzo.
+   Vinted non ha un modo per ricevere l'annuncio da fuori, quindi la cosa
+   piu utile e preparare il testo gia scritto e metterlo negli appunti:
+   apri l'app, tieni premuto, incolla. */
+function bookAsVinted(b) {
+  var L = [];
+  var titolo = b.title || "Libro";
+  var by = authorsOf(b);
+
+  L.push(titolo + (by ? " - " + by : ""));
+  L.push("");
+
+  var d = [];
+  d.push("Libro per bambini in vendita.");
+  if (b.subtitle) d.push(b.subtitle + ".");
+  var ed = [b.publisher, b.year].filter(Boolean).join(", ");
+  if (ed) d.push("Editore: " + ed + ".");
+  if (b.series) d.push("Collana: " + b.series + ".");
+  var g = genresOf(b);
+  if (g.length) d.push("Genere: " + g.join(", ") + ".");
+  if (b.age) d.push("Eta consigliata: " + b.age + ".");
+  if (b.pages) d.push("Pagine: " + b.pages + ".");
+  L.push(d.join(" "));
+  L.push("");
+
+  L.push("Condizioni: " + (b.condition || "buone, da verificare in foto") + ".");
+  L.push("Spedizione tramite Vinted. Fumo: no. Animali: no.");
+  if (b.isbn) { L.push(""); L.push("ISBN " + b.isbn); }
+
+  if (b.sale_price) {
+    L.push("");
+    L.push("Prezzo: " + b.sale_price + " \u20ac");
+  }
+  return L.join("\n");
+}
+
+/* Copia negli appunti. Il metodo moderno vuole https e a volte non c'e:
+   in quel caso ripiego sul vecchio sistema, che funziona sempre. */
+function copyText(t) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(t);
+  }
+  return new Promise(function (res, rej) {
+    var ta = document.createElement("textarea");
+    ta.value = t;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy") ? res() : rej(new Error("copia non riuscita")); }
+    catch (e) { rej(e); }
+    finally { document.body.removeChild(ta); }
+  });
+}
+
+function currentBook() {
+  return books.find(function (x) { return x.id === viewingId; });
+}
+
+$("bvCopy").addEventListener("click", function () {
+  var b = currentBook(); if (!b) return;
+  copyText(bookAsText(b))
+    .then(function () { toast("Scheda copiata: ora puoi incollarla dove vuoi"); })
+    .catch(function () { toast("Non sono riuscito a copiare"); });
+});
+
+$("bvVinted").addEventListener("click", function () {
+  var b = currentBook(); if (!b) return;
+  copyText(bookAsVinted(b))
+    .then(function () { toast("Annuncio copiato: aprilo su Vinted e incolla"); })
+    .catch(function () { toast("Non sono riuscito a copiare"); });
+});
+
+$("bvShare").addEventListener("click", function () {
+  var b = currentBook(); if (!b) return;
+  var testo = bookAsText(b);
+  /* Il pannello di condivisione del telefono c'e solo su https e su
+     alcuni browser: se manca, ripiego sulla copia. */
+  if (navigator.share) {
+    navigator.share({ title: b.title || "Libro", text: testo })
+      .catch(function (e) {
+        /* se l'utente annulla non e un errore: non dico nulla */
+        if (e && e.name === "AbortError") return;
+        copyText(testo).then(function () { toast("Scheda copiata"); });
+      });
+  } else {
+    copyText(testo).then(function () {
+      toast("Condivisione non disponibile: ho copiato la scheda");
+    }).catch(function () { toast("Non sono riuscito a condividere"); });
+  }
+});
+
 $("bvEdit").addEventListener("click", function () {
   var id = viewingId;
   $("bvModal").hidden = true;

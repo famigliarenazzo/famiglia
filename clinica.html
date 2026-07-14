@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La cartella clinica · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* ---------- le persone ---------- */
+  .people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+  .person{
+    background:var(--card,#161b22);border:1px solid var(--line,#2a3550);
+    border-radius:16px;padding:16px;cursor:pointer;text-align:center;
+    transition:transform .12s,border-color .12s;
+  }
+  .person:hover{transform:translateY(-2px);border-color:var(--acc,#7aa2f7)}
+  .person .av{
+    width:64px;height:64px;border-radius:50%;margin:0 auto 10px;
+    background:var(--acc,#7aa2f7);color:#0d1117;
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:700;overflow:hidden;
+  }
+  .person .av img{width:100%;height:100%;object-fit:cover}
+  .person h3{margin:0 0 3px;font-size:15px}
+  .person .age{font-size:12px;opacity:.6}
+  .person .cnt{margin-top:8px;font-size:11px;opacity:.5}
+
+  /* ---------- scheda ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .recs{width:100%;border-collapse:collapse;margin-top:10px}
+  .recs th,.recs td{padding:10px 8px;text-align:left;font-size:13px;border-bottom:1px solid var(--line,#2a3550)}
+  .recs th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.55}
+  .recs .acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .recs .acts button{
+    border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+    border-radius:8px;padding:5px 8px;font-size:12px;cursor:pointer;
+  }
+  .recs .acts button:hover{border-color:var(--acc,#7aa2f7)}
+  .kind{font-size:11px;padding:2px 7px;border-radius:999px;background:var(--acc,#7aa2f7)22;opacity:.9}
+  .empty-note{opacity:.5;font-size:13px;padding:18px 0;text-align:center}
+
+  /* anteprima referto */
+  .prev{width:100%;height:70vh;border:0;border-radius:12px;background:#fff}
+  .prev-img{width:100%;max-height:70vh;object-fit:contain;border-radius:12px;background:#fff}
+  .privacy{
+    font-size:12px;opacity:.6;margin-top:14px;padding:10px 12px;
+    border:1px dashed var(--line,#2a3550);border-radius:10px;line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<header class="hdr" id="hdr"></header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
+
+  <div class="people" id="people"></div>
+
+  <p class="privacy">
+    I referti sono dati sanitari e stanno in un archivio <b>privato</b>: senza
+    l’accesso non si aprono, nemmeno conoscendone l’indirizzo esatto. Ogni volta
+    che apri un file, il collegamento viene creato al momento e scade dopo un’ora.
+  </p>
+</main>
+
+<!-- ============ scheda della persona ============ -->
+<div class="modal" id="pModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="pTitle">Scheda</h2>
+      <button class="btn-ghost" id="pEdit" style="padding:8px 13px;font-size:13px">✏️ Modifica</button>
+      <button class="x" id="pClose">✕</button>
+    </div>
+    <div class="sheet-body" id="pBody"></div>
+    <div class="sheet-foot">
+      <button class="btn-primary" id="pAddRec">＋ Aggiungi un esame</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ modifica scheda ============ -->
+<div class="modal" id="eModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head"><h2>Modifica la scheda</h2><button class="x" id="eX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Foto</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="av" id="eAv" style="width:56px;height:56px;border-radius:50%;background:var(--acc,#7aa2f7);color:#0d1117;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden"></div>
+          <input type="file" id="ePhoto" accept="image/*" style="flex:1">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label>Nome</label><input id="eName"></div>
+        <div class="fld"><label>Data di nascita</label><input id="eBirth" type="date"></div>
+        <div class="fld"><label>Gruppo sanguigno</label>
+          <select id="eBlood">
+            <option value="">— non indicato —</option>
+            <option>0+</option><option>0−</option>
+            <option>A+</option><option>A−</option>
+            <option>B+</option><option>B−</option>
+            <option>AB+</option><option>AB−</option>
+          </select>
+        </div>
+        <div class="fld"><label>Codice fiscale</label><input id="eCf"></div>
+        <div class="fld"><label>Tessera sanitaria</label><input id="eCard"></div>
+        <div class="fld"><label>Medico / pediatra</label><input id="eDoc"></div>
+        <div class="fld"><label>Telefono del medico</label><input id="eDocTel" type="tel"></div>
+        <div class="fld"><label>Contatto d’emergenza</label><input id="eEmg"></div>
+      </div>
+      <div class="fld"><label>Allergie</label><textarea id="eAll" rows="2"></textarea></div>
+      <div class="fld"><label>Intolleranze</label><textarea id="eInt" rows="2"></textarea></div>
+      <div class="fld"><label>Terapie in corso</label><textarea id="eThe" rows="2"></textarea></div>
+      <div class="fld"><label>Patologie croniche</label><textarea id="eCon" rows="2"></textarea></div>
+      <div class="fld"><label>Vaccinazioni</label><textarea id="eVac" rows="2"></textarea></div>
+      <div class="fld"><label>Esenzioni</label><textarea id="eExe" rows="2"></textarea></div>
+      <div class="fld"><label>Note</label><textarea id="eNotes" rows="3"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="eCanc">Annulla</button>
+      <button class="btn-primary" id="eSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ aggiungi / modifica esame ============ -->
+<div class="modal" id="rModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="rTitle">Aggiungi un esame</h2><button class="x" id="rX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Nome dell’esame</label><input id="rName" placeholder="Emocromo completo"></div>
+      <div class="grid2">
+        <div class="fld"><label>Data</label><input id="rDate" type="date"></div>
+        <div class="fld"><label>Tipo</label>
+          <select id="rKind">
+            <option value="">— non indicato —</option>
+            <option>Sangue</option><option>Urine</option>
+            <option>Radiologia</option><option>Ecografia</option>
+            <option>Cardiologia</option><option>Visita</option>
+            <option>Vaccinazione</option><option>Altro</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld"><label>Dove</label><input id="rPlace" placeholder="Laboratorio, ospedale…"></div>
+      <div class="fld"><label>Il documento (PDF o foto)</label><input type="file" id="rFile" accept="application/pdf,image/*"></div>
+      <div class="fld"><label>Note</label><textarea id="rNotes" rows="3"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="rCanc">Annulla</button>
+      <button class="btn-primary" id="rSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ anteprima referto ============ -->
+<div class="modal" id="vModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="vTitle">Referto</h2>
+      <button class="btn-ghost" id="vPrint" style="padding:8px 13px;font-size:13px">🖨️ Stampa</button>
+      <button class="btn-ghost" id="vShare" style="padding:8px 13px;font-size:13px">↗️ Condividi</button>
+      <button class="x" id="vX">✕</button>
+    </div>
+    <div class="sheet-body" id="vBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="famiglia.js"></script>
+<script>
+/* =====================================================================
+   LA CARTELLA CLINICA
+   Le schede di famiglia e i referti degli esami.
+
+   I referti sono dati sanitari: stanno in un archivio privato, e per
+   aprirli si chiede ogni volta un collegamento firmato che scade dopo
+   un'ora. Le copertine dei libri stanno in un archivio pubblico, e va
+   benissimo cosi; qui no.
+   ===================================================================== */
+
+$("hdr").innerHTML = toolHeader("La cartella clinica", "");
+
+var BUCKET = "privati";
+var people = [], records = {}, viewId = null, editId = null, recId = null, newPhoto = null;
+
+/* ---------- utilita ---------- */
+
+/* L'eta, scritta come la direbbe una persona: i neonati in mesi. */
+function etaOf(birth) {
+  if (!birth) return "";
+  var b = new Date(birth), o = new Date();
+  var mesi = (o.getFullYear() - b.getFullYear()) * 12 + (o.getMonth() - b.getMonth());
+  if (o.getDate() < b.getDate()) mesi--;
+  if (mesi < 0) return "";
+  if (mesi < 24) return mesi + (mesi === 1 ? " mese" : " mesi");
+  var anni = Math.floor(mesi / 12);
+  return anni + (anni === 1 ? " anno" : " anni");
+}
+function iniz(name) {
+  return (name || "?").split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join("").toUpperCase();
+}
+function fmtData(d) {
+  if (!d) return "—";
+  var p = String(d).slice(0, 10).split("-");
+  if (p.length !== 3) return d;
+  return p[2] + " " + MESI_BREVI[+p[1]].toLowerCase() + " " + p[0];
+}
+
+/* Il collegamento firmato: vale un'ora, poi non funziona piu.
+   E' il motivo per cui il file non si puo aprire senza aver fatto l'accesso. */
+function signedUrl(path) {
+  return sb.storage.from(BUCKET).createSignedUrl(path, 3600).then(function (r) {
+    if (r.error) throw r.error;
+    return r.data.signedUrl;
+  });
+}
+
+/* Carica un file nell'archivio privato. I PDF NON vengono compressi
+   (rovinerebbe il documento): solo le foto. */
+function uploadPrivate(file, prefix) {
+  var isImg = /^image\//.test(file.type);
+  var prep = isImg ? compressImage(file, 1600, 0.8) : Promise.resolve(file);
+  return prep.then(function (blob) {
+    var ext = isImg ? "jpg" : (file.name.split(".").pop() || "bin").toLowerCase();
+    var path = prefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+    return sb.storage.from(BUCKET).upload(path, blob, {
+      contentType: isImg ? "image/jpeg" : (file.type || "application/octet-stream"),
+      upsert: false
+    }).then(function (r) {
+      if (r.error) throw r.error;
+      return { path: path, mime: isImg ? "image/jpeg" : file.type, size: blob.size };
+    });
+  });
+}
+
+/* ---------- le persone ---------- */
+function drawPeople() {
+  if (!people.length) {
+    $("people").innerHTML = '<p class="empty-note">Nessuna scheda. Esegui schema4.sql su Supabase.</p>';
+    return;
+  }
+  $("people").innerHTML = people.map(function (p) {
+    var n = (records[p.id] || []).length;
+    var av = p._photoUrl
+      ? '<img src="' + esc(p._photoUrl) + '" alt="">'
+      : esc(iniz(p.name));
+    return '<div class="person" data-id="' + p.id + '">'
+      + '<div class="av">' + av + "</div>"
+      + "<h3>" + esc(p.name) + "</h3>"
+      + '<div class="age">' + esc(etaOf(p.birth_date)) + "</div>"
+      + '<div class="cnt">' + (n ? n + (n === 1 ? " esame" : " esami") : "nessun esame") + "</div>"
+      + "</div>";
+  }).join("");
+  $("people").querySelectorAll(".person").forEach(function (el) {
+    el.addEventListener("click", function () { openPerson(el.getAttribute("data-id")); });
+  });
+}
+
+/* ---------- scheda della persona ---------- */
+function openPerson(id) {
+  var p = people.filter(function (x) { return x.id === id; })[0];
+  if (!p) return;
+  viewId = id;
+  $("pTitle").textContent = p.name;
+
+  var rows = "";
+  function row(k, v) {
+    if (!v) return;
+    rows += '<div class="row"><span class="k">' + k + '</span><span class="v">'
+      + String(v).replace(/\n/g, "<br>") + "</span></div>";
+  }
+  row("Nata/o il", fmtData(p.birth_date) + (etaOf(p.birth_date) ? " · " + etaOf(p.birth_date) : ""));
+  row("Gruppo sanguigno", esc(p.blood_type));
+  row("Allergie", esc(p.allergies));
+  row("Intolleranze", esc(p.intolerances));
+  row("Terapie in corso", esc(p.therapies));
+  row("Patologie", esc(p.conditions));
+  row("Vaccinazioni", esc(p.vaccinations));
+  row("Esenzioni", esc(p.exemptions));
+  row("Medico", esc([p.doctor, p.doctor_phone].filter(Boolean).join(" · ")));
+  row("Emergenza", esc(p.emergency));
+  row("Codice fiscale", esc(p.fiscal_code));
+  row("Tessera sanitaria", esc(p.health_card));
+  row("Note", esc(p.notes));
+  if (!rows) rows = '<p class="empty-note">Scheda ancora vuota: tocca «Modifica» per compilarla.</p>';
+
+  var recs = records[id] || [];
+  var tbl;
+  if (!recs.length) {
+    tbl = '<p class="empty-note">Nessun esame archiviato.</p>';
+  } else {
+    tbl = '<table class="recs"><thead><tr>'
+      + "<th>Esame</th><th>Data</th><th></th></tr></thead><tbody>"
+      + recs.map(function (r) {
+        var meta = [];
+        if (r.kind) meta.push('<span class="kind">' + esc(r.kind) + "</span>");
+        if (r.place) meta.push(esc(r.place));
+        return "<tr>"
+          + "<td><b>" + esc(r.title) + "</b>"
+          + (meta.length ? '<div style="margin-top:3px;font-size:12px;opacity:.65">' + meta.join(" · ") + "</div>" : "")
+          + (r.notes ? '<div style="margin-top:3px;font-size:12px;opacity:.5">' + esc(r.notes) + "</div>" : "")
+          + "</td>"
+          + "<td>" + esc(fmtData(r.exam_date)) + "</td>"
+          + '<td><div class="acts">'
+          + (r.path ? '<button data-open="' + r.id + '">Apri</button>' : "")
+          + '<button data-note="' + r.id + '">Note</button>'
+          + '<button data-del="' + r.id + '">Elimina</button>'
+          + "</div></td></tr>";
+      }).join("")
+      + "</tbody></table>";
+  }
+
+  $("pBody").innerHTML = '<div class="rows">' + rows + "</div>"
+    + '<h3 style="margin:20px 0 0;font-size:15px">Gli esami</h3>' + tbl;
+
+  $("pBody").querySelectorAll("[data-open]").forEach(function (b) {
+    b.addEventListener("click", function () { openRecord(b.getAttribute("data-open")); });
+  });
+  $("pBody").querySelectorAll("[data-note]").forEach(function (b) {
+    b.addEventListener("click", function () { openRecForm(b.getAttribute("data-note")); });
+  });
+  $("pBody").querySelectorAll("[data-del]").forEach(function (b) {
+    b.addEventListener("click", function () { delRecord(b.getAttribute("data-del")); });
+  });
+
+  $("pModal").hidden = false;
+}
+$("pClose").addEventListener("click", function () { $("pModal").hidden = true; });
+$("pModal").addEventListener("click", function (e) { if (e.target === $("pModal")) $("pModal").hidden = true; });
+
+/* ---------- modifica scheda ---------- */
+$("pEdit").addEventListener("click", function () {
+  var p = people.filter(function (x) { return x.id === viewId; })[0];
+  if (!p) return;
+  editId = p.id; newPhoto = null;
+  $("eName").value  = p.name || "";
+  $("eBirth").value = p.birth_date ? String(p.birth_date).slice(0, 10) : "";
+  $("eBlood").value = p.blood_type || "";
+  $("eCf").value    = p.fiscal_code || "";
+  $("eCard").value  = p.health_card || "";
+  $("eDoc").value   = p.doctor || "";
+  $("eDocTel").value= p.doctor_phone || "";
+  $("eEmg").value   = p.emergency || "";
+  $("eAll").value   = p.allergies || "";
+  $("eInt").value   = p.intolerances || "";
+  $("eThe").value   = p.therapies || "";
+  $("eCon").value   = p.conditions || "";
+  $("eVac").value   = p.vaccinations || "";
+  $("eExe").value   = p.exemptions || "";
+  $("eNotes").value = p.notes || "";
+  $("eAv").innerHTML = p._photoUrl ? '<img src="' + esc(p._photoUrl) + '" style="width:100%;height:100%;object-fit:cover">' : esc(iniz(p.name));
+  $("eModal").hidden = false;
+});
+$("ePhoto").addEventListener("change", function () {
+  var f = this.files && this.files[0];
+  if (!f) return;
+  newPhoto = f;
+  $("eAv").innerHTML = '<img src="' + URL.createObjectURL(f) + '" style="width:100%;height:100%;object-fit:cover">';
+});
+function closeEdit() { $("eModal").hidden = true; editId = null; newPhoto = null; }
+$("eX").addEventListener("click", closeEdit);
+$("eCanc").addEventListener("click", closeEdit);
+
+$("eSave").addEventListener("click", function () {
+  var name = $("eName").value.trim();
+  if (!name) { toast("Il nome serve"); return; }
+  var data = {
+    name: name,
+    birth_date: $("eBirth").value || null,
+    blood_type: $("eBlood").value || null,
+    fiscal_code: $("eCf").value.trim() || null,
+    health_card: $("eCard").value.trim() || null,
+    doctor: $("eDoc").value.trim() || null,
+    doctor_phone: $("eDocTel").value.trim() || null,
+    emergency: $("eEmg").value.trim() || null,
+    allergies: $("eAll").value.trim() || null,
+    intolerances: $("eInt").value.trim() || null,
+    therapies: $("eThe").value.trim() || null,
+    conditions: $("eCon").value.trim() || null,
+    vaccinations: $("eVac").value.trim() || null,
+    exemptions: $("eExe").value.trim() || null,
+    notes: $("eNotes").value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  var id = editId;
+  var pre = newPhoto
+    ? uploadPrivate(newPhoto, "foto").then(function (up) { data.photo = up.path; })
+    : Promise.resolve();
+
+  $("eSave").disabled = true;
+  pre.then(function () {
+    return guard(sb.from("people").update(data).eq("id", id), "people");
+  }).then(function () {
+    closeEdit();
+    toast("Scheda salvata");
+    return load();
+  }).then(function () { openPerson(id); })
+    .catch(function () { /* guard ha gia avvisato */ })
+    .then(function () { $("eSave").disabled = false; });
+});
+
+/* ---------- esami ---------- */
+$("pAddRec").addEventListener("click", function () { openRecForm(null); });
+
+function openRecForm(id) {
+  recId = id || null;
+  var r = id ? (records[viewId] || []).filter(function (x) { return x.id === id; })[0] : null;
+  $("rTitle").textContent = r ? "Modifica l’esame" : "Aggiungi un esame";
+  $("rName").value  = r ? (r.title || "") : "";
+  $("rDate").value  = r && r.exam_date ? String(r.exam_date).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  $("rKind").value  = r ? (r.kind || "") : "";
+  $("rPlace").value = r ? (r.place || "") : "";
+  $("rNotes").value = r ? (r.notes || "") : "";
+  $("rFile").value  = "";
+  $("rModal").hidden = false;
+}
+function closeRec() { $("rModal").hidden = true; recId = null; }
+$("rX").addEventListener("click", closeRec);
+$("rCanc").addEventListener("click", closeRec);
+
+$("rSave").addEventListener("click", function () {
+  var name = $("rName").value.trim();
+  if (!name) { toast("Il nome dell’esame serve"); return; }
+  var f = $("rFile").files && $("rFile").files[0];
+  if (!recId && !f) { toast("Scegli il documento da archiviare"); return; }
+
+  var data = {
+    person_id: viewId,
+    title: name,
+    exam_date: $("rDate").value || null,
+    kind: $("rKind").value || null,
+    place: $("rPlace").value.trim() || null,
+    notes: $("rNotes").value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+
+  $("rSave").disabled = true;
+  var pre = f
+    ? uploadPrivate(f, "referti").then(function (up) {
+        data.path = up.path; data.mime = up.mime; data.size = up.size;
+      })
+    : Promise.resolve();
+
+  pre.then(function () {
+    return recId
+      ? guard(sb.from("medical_records").update(data).eq("id", recId), "rec")
+      : guard(sb.from("medical_records").insert(data), "rec");
+  }).then(function () {
+    closeRec();
+    toast("Esame archiviato");
+    return load();
+  }).then(function () { openPerson(viewId); })
+    .catch(function () { })
+    .then(function () { $("rSave").disabled = false; });
+});
+
+function delRecord(id) {
+  var r = (records[viewId] || []).filter(function (x) { return x.id === id; })[0];
+  if (!r) return;
+  if (!confirm("Elimino «" + r.title + "»? Il documento viene cancellato per sempre.")) return;
+  var pre = r.path
+    ? sb.storage.from(BUCKET).remove([r.path])
+    : Promise.resolve();
+  pre.then(function () {
+    return guard(sb.from("medical_records").delete().eq("id", id), "del");
+  }).then(function () {
+    toast("Eliminato");
+    return load();
+  }).then(function () { openPerson(viewId); });
+}
+
+/* ---------- anteprima, stampa, condivisione ---------- */
+var viewingRec = null;
+
+function openRecord(id) {
+  var r = (records[viewId] || []).filter(function (x) { return x.id === id; })[0];
+  if (!r || !r.path) return;
+  viewingRec = r;
+  $("vTitle").textContent = r.title;
+  $("vBody").innerHTML = '<p class="empty-note">Apro il documento…</p>';
+  $("vModal").hidden = false;
+
+  signedUrl(r.path).then(function (url) {
+    r._url = url;
+    if (/^image\//.test(r.mime || "")) {
+      $("vBody").innerHTML = '<img class="prev-img" src="' + esc(url) + '" alt="">';
+    } else {
+      /* I PDF: il visore del browser. Su iPhone dentro una finestra
+         l'anteprima a volte non parte, quindi offro anche il collegamento. */
+      $("vBody").innerHTML = '<iframe class="prev" src="' + esc(url) + '"></iframe>'
+        + '<p class="empty-note">Non si vede? <a href="' + esc(url) + '" target="_blank" rel="noopener">Aprilo in una scheda nuova</a>.</p>';
+    }
+  }).catch(function () {
+    $("vBody").innerHTML = '<p class="empty-note">Non riesco ad aprire il documento.</p>';
+  });
+}
+$("vX").addEventListener("click", function () { $("vModal").hidden = true; viewingRec = null; });
+$("vModal").addEventListener("click", function (e) { if (e.target === $("vModal")) { $("vModal").hidden = true; } });
+
+$("vPrint").addEventListener("click", function () {
+  if (!viewingRec || !viewingRec._url) return;
+  /* La stampa la fa il visore del documento, in una finestra sua. */
+  var w = window.open(viewingRec._url, "_blank");
+  if (!w) { toast("Il browser ha bloccato la finestra"); return; }
+  w.addEventListener("load", function () { try { w.print(); } catch (e) { } });
+});
+
+$("vShare").addEventListener("click", function () {
+  if (!viewingRec) return;
+  var r = viewingRec;
+  /* Condivido il file vero, non il collegamento: il collegamento scade
+     dopo un'ora e chi lo riceve si troverebbe con una pagina morta. */
+  sb.storage.from(BUCKET).download(r.path).then(function (res) {
+    if (res.error) throw res.error;
+    var ext = /^image\//.test(r.mime || "") ? "jpg" : "pdf";
+    var file = new File([res.data], (r.title || "referto") + "." + ext,
+      { type: r.mime || "application/pdf" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ title: r.title, files: [file] });
+    }
+    /* Se il telefono non sa condividere i file, lo scarico: da lì
+       lo mandi con l'app che preferisci. */
+    var u = URL.createObjectURL(res.data);
+    var a = document.createElement("a");
+    a.href = u; a.download = file.name;
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+    toast("Documento scaricato: ora puoi inviarlo");
+  }).catch(function (e) {
+    if (e && e.name === "AbortError") return;   /* annullato: non è un errore */
+    toast("Non sono riuscito a condividere");
+  });
+});
+
+/* ---------- caricamento ---------- */
+function load() {
+  return Promise.all([
+    sb.from("people").select("*").order("pos"),
+    sb.from("medical_records").select("*").order("exam_date", { ascending: false })
+  ]).then(function (res) {
+    if (res[0].error) throw res[0].error;
+    if (res[1].error) throw res[1].error;
+    people = res[0].data || [];
+    records = {};
+    (res[1].data || []).forEach(function (r) {
+      (records[r.person_id] = records[r.person_id] || []).push(r);
+    });
+
+    /* Le foto profilo stanno nell'archivio privato: servono i collegamenti firmati. */
+    var withPhoto = people.filter(function (p) { return p.photo; });
+    return Promise.all(withPhoto.map(function (p) {
+      return signedUrl(p.photo).then(function (u) { p._photoUrl = u; })
+        .catch(function () { p._photoUrl = null; });
+    }));
+  }).then(function () {
+    var n = Object.keys(records).reduce(function (s, k) { return s + records[k].length; }, 0);
+    setStatus("ok", "<b>" + people.length + "</b> schede · <b>" + n + "</b> "
+      + (n === 1 ? "esame archiviato" : "esami archiviati"));
+    drawPeople();
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("err", "Non riesco a leggere i dati. Hai eseguito <b>schema4.sql</b>?");
+  });
+}
+
+requireAuth().then(load);
+</script>
+</body>
+</html>

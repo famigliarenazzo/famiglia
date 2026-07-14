@@ -209,3 +209,21 @@ html[data-theme="light"] .loading { color: var(--ink-soft); }
 }
 html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-color: var(--brass); }
 @keyframes sp { to { transform: rotate(360deg); } }
+
+/* ---------- caselle a scelta multipla (portate, stagioni) ---------- */
+.chipset{display:flex;flex-wrap:wrap;gap:7px}
+.chipsel{
+  border:1px solid var(--line,#2a3550);background:transparent;color:inherit;
+  border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;
+  cursor:pointer;transition:background .12s,border-color .12s,color .12s;
+}
+.chipsel:hover{border-color:var(--acc,#7aa2f7)}
+.chipsel.on{background:var(--acc,#7aa2f7);border-color:var(--acc,#7aa2f7);color:#0d1117;font-weight:600}
+.fld .hint{font-weight:400;opacity:.55;font-size:11px;margin-left:6px}
+
+/* ---------- barra azioni della scheda libro ---------- */
+.sheet-foot{
+  display:flex;gap:8px;flex-wrap:wrap;
+  padding:12px 18px 16px;border-top:1px solid var(--line,#2a3550);
+}
+.bv-actions .btn-ghost{padding:9px 13px;font-size:13px}

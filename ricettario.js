@@ -27,6 +27,47 @@ var PASTI = [{ k: "pranzo", l: "☀️ Pranzo" }, { k: "cena", l: "🌙 Cena" }]
 
 function porOf(k) { return PORTATE.filter(function (p) { return p.k === k; })[0] || null; }
 function staOf(k) { return STAGIONI.filter(function (s) { return s.k === k; })[0] || null; }
+
+/* --- Piu portate e piu stagioni per piatto ---
+   Prima ogni piatto poteva avere una sola portata e una sola stagione.
+   I pancake pero sono colazione e insieme dolce. Ora sono elenchi.
+   Queste due funzioni leggono sia il nuovo formato (elenco) sia il
+   vecchio (valore singolo), cosi le ricette gia salvate continuano a
+   funzionare senza conversioni. */
+function porList(r) {
+  if (r && Array.isArray(r.portate) && r.portate.length) return r.portate;
+  if (r && r.portata) return [r.portata];
+  return [];
+}
+function staList(r) {
+  if (r && Array.isArray(r.stagioni) && r.stagioni.length) return r.stagioni;
+  if (r && r.stagione) return [r.stagione];
+  return [];
+}
+/* Le etichette da mostrare */
+function porOfList(r) { return porList(r).map(porOf).filter(Boolean); }
+function staOfList(r) { return staList(r).map(staOf).filter(Boolean); }
+
+/* Disegna un gruppo di caselle da spuntare (piu scelte) */
+function chipGroup(elId, options, selected) {
+  var el = $(elId);
+  if (!el) return;
+  selected = selected || [];
+  el.innerHTML = options.map(function (o) {
+    var on = selected.indexOf(o.k) >= 0;
+    return '<button type="button" class="chipsel' + (on ? ' on' : '') + '" data-k="' + o.k + '">'
+      + o.e + " " + esc(o.l) + "</button>";
+  }).join("");
+  el.querySelectorAll(".chipsel").forEach(function (b) {
+    b.addEventListener("click", function () { b.classList.toggle("on"); });
+  });
+}
+function chipGroupValue(elId) {
+  var el = $(elId);
+  if (!el) return [];
+  return [].slice.call(el.querySelectorAll(".chipsel.on")).map(function (b) { return b.getAttribute("data-k"); });
+}
+
 function catOf(id) { return cats.filter(function (c) { return c.id === id; })[0] || null; }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
@@ -83,12 +124,14 @@ function recRows() {
   var q = $("q").value.trim();
   return recipes.filter(function (r) {
     if (favOnly && !r.fav) return false;
-    if (fPortata && (r.portata || "") !== fPortata) return false;
+    /* Basta che il piatto abbia QUELLA portata fra le sue. */
+    if (fPortata && porList(r).indexOf(fPortata) < 0) return false;
     if (fStagione) {
-      var s = r.stagione || "";
+      var ss = staList(r);
       /* "Sempre" vale tutto l'anno: compare anche filtrando una stagione. */
-      if (fStagione === "sempre") { if (s !== "sempre") return false; }
-      else if (s !== fStagione && s !== "sempre") return false;
+      if (fStagione === "sempre") {
+        if (ss.indexOf("sempre") < 0) return false;
+      } else if (ss.indexOf(fStagione) < 0 && ss.indexOf("sempre") < 0) return false;
     }
     return matches(r, q).hit;
   }).sort(function (a, b) {
@@ -130,10 +173,10 @@ function drawRecipes() {
     h.innerHTML = '<div class="tbl">' + list.map(function (r) {
       var th = r.photo ? '<span class="th"><img src="' + esc(r.photo) + '" alt="" loading="lazy"></span>'
         : '<span class="th">' + POT + "</span>";
-      var p = porOf(r.portata), s = staOf(r.stagione), t = tempo(r), sub = [];
+      var p = porOfList(r), s = staOfList(r), t = tempo(r), sub = [];
       if (r.fav) sub.push("⭐");
-      if (p) sub.push(p.e + " " + p.l);
-      if (s) sub.push(s.e + " " + s.l);
+      p.forEach(function (x) { sub.push(x.e + " " + x.l); });
+      s.forEach(function (x) { sub.push(x.e + " " + x.l); });
       if (t) sub.push("⏱ " + t + " min");
       sub.push(ings(r).length + " ingr.");
       return '<div class="trow" data-id="' + r.id + '">' + th
@@ -143,8 +186,10 @@ function drawRecipes() {
   } else {
     h.className = "grid";
     h.innerHTML = list.map(function (r) {
-      var p = porOf(r.portata), s = staOf(r.stagione);
-      var tags = (p || s) ? '<div class="tags">' + (p ? "<span>" + p.e + "</span>" : "") + (s ? "<span>" + s.e + "</span>" : "") + "</div>" : "";
+      var p = porOfList(r), s = staOfList(r);
+      var tags = (p.length || s.length) ? '<div class="tags">'
+        + p.map(function (x) { return "<span>" + x.e + "</span>"; }).join("")
+        + s.map(function (x) { return "<span>" + x.e + "</span>"; }).join("") + "</div>" : "";
       var fav = '<button class="fav' + (r.fav ? " on" : "") + '" data-fav>' + (r.fav ? ST_ON : ST_OFF) + "</button>";
       var ph = r.photo ? '<img src="' + esc(r.photo) + '" alt="" loading="lazy">' : '<span class="nop">' + POT + "</span>";
       return '<div class="rc" data-id="' + r.id + '"><div class="ph">' + ph + fav + tags + "</div>"
@@ -199,9 +244,9 @@ function drawRec(r) {
   if (r.photo) h += '<img class="rv-ph" src="' + esc(r.photo) + '" alt="">';
 
   var chips = "";
-  var p = porOf(r.portata), s = staOf(r.stagione);
-  if (p) chips += '<span class="chip">' + p.e + " " + p.l + "</span>";
-  if (s) chips += '<span class="chip">' + s.e + " " + s.l + "</span>";
+  var p = porOfList(r), s = staOfList(r);
+  p.forEach(function (x) { chips += '<span class="chip">' + x.e + " " + x.l + "</span>"; });
+  s.forEach(function (x) { chips += '<span class="chip">' + x.e + " " + x.l + "</span>"; });
   if (parseInt(r.prep)) chips += '<span class="chip">⏱ ' + parseInt(r.prep) + " min prep.</span>";
   if (parseInt(r.cook)) chips += '<span class="chip">🔥 ' + parseInt(r.cook) + " min cottura</span>";
   if (chips) h += '<div class="chips">' + chips + "</div>";
@@ -284,9 +329,9 @@ $("rvDel").addEventListener("click", function () {
 /* ---------- condivisione ---------- */
 function recText(r) {
   var L = ["🍲 " + (r.name || "Ricetta")];
-  var p = porOf(r.portata), s = staOf(r.stagione), tag = [];
-  if (p) tag.push(p.e + " " + p.l);
-  if (s) tag.push(s.e + " " + s.l);
+  var p = porOfList(r), s = staOfList(r), tag = [];
+  p.forEach(function (x) { tag.push(x.e + " " + x.l); });
+  s.forEach(function (x) { tag.push(x.e + " " + x.l); });
   if (tag.length) L.push(tag.join(" · "));
   var t = [];
   if (parseInt(r.prep)) t.push("Prep " + parseInt(r.prep) + " min");
@@ -359,10 +404,8 @@ $("ckX").addEventListener("click", ckClose);
 /* ---------- modulo ricetta ---------- */
 var editId = null, newPhoto = null;
 (function () {
-  $("fPo").innerHTML = '<option value="">— Nessuna —</option>'
-    + PORTATE.map(function (p) { return '<option value="' + p.k + '">' + p.e + " " + p.l + "</option>"; }).join("");
-  $("fSt").innerHTML = '<option value="">— Nessuna —</option>'
-    + STAGIONI.map(function (s) { return '<option value="' + s.k + '">' + s.e + " " + s.l + "</option>"; }).join("");
+  /* Nel modulo, portate e stagioni sono caselle da spuntare: puoi
+     sceglierne piu di una. I filtri in alto restano a scelta singola. */
   $("fPor").innerHTML = '<option value="">Tutte le portate</option>'
     + PORTATE.map(function (p) { return '<option value="' + p.k + '">' + p.e + " " + p.l + "</option>"; }).join("");
   $("fSta").innerHTML = '<option value="">Tutte le stagioni</option>'
@@ -429,8 +472,8 @@ function openForm(id) {
   var r = id ? recipes.filter(function (x) { return x.id === id; })[0] : null;
   $("fT").textContent = id ? "Modifica ricetta" : "Aggiungi ricetta";
   $("fN").value = r ? (r.name || "") : "";
-  $("fPo").value = r ? (r.portata || "") : "";
-  $("fSt").value = r ? (r.stagione || "") : "";
+  chipGroup("fPo", PORTATE,  r ? porList(r) : []);
+  chipGroup("fSt", STAGIONI, r ? staList(r) : []);
   $("fPr").value = r ? (r.prep || "") : "";
   $("fCo").value = r ? (r.cook || "") : "";
   $("fSe").value = r ? (r.servings || "") : "";
@@ -455,8 +498,14 @@ $("fSave").addEventListener("click", function () {
   if (!name) { toast("Il nome serve"); $("fN").focus(); return; }
   var data = {
     name: name,
-    portata: $("fPo").value || null,
-    stagione: $("fSt").value || null,
+    /* i nuovi elenchi */
+    portate:  chipGroupValue("fPo"),
+    stagioni: chipGroupValue("fSt"),
+    /* le vecchie colonne le tengo allineate al primo valore, cosi se
+       apri il database dal pannello di Supabase trovi ancora qualcosa
+       di sensato e nulla si rompe. */
+    portata:  chipGroupValue("fPo")[0]  || null,
+    stagione: chipGroupValue("fSt")[0] || null,
     prep: $("fPr").value.trim() || null,
     cook: $("fCo").value.trim() || null,
     servings: $("fSe").value.trim() || null,
@@ -571,9 +620,9 @@ function drawPick() {
   }).filter(function (r) { return !q || (r.name || "").toLowerCase().indexOf(q) >= 0; });
   $("pkL").innerHTML = l.length ? l.map(function (r) {
     var th = r.photo ? '<span class="th"><img src="' + esc(r.photo) + '" alt=""></span>' : '<span class="th">' + POT + "</span>";
-    var p = porOf(r.portata), s = staOf(r.stagione), sub = [];
-    if (p) sub.push(p.e + " " + p.l);
-    if (s) sub.push(s.e + " " + s.l);
+    var p = porOfList(r), s = staOfList(r), sub = [];
+    p.forEach(function (x) { sub.push(x.e + " " + x.l); });
+    s.forEach(function (x) { sub.push(x.e + " " + x.l); });
     return '<div class="pick-row" data-p="' + r.id + '">' + th
       + '<div><div class="n">' + esc(r.name) + "</div>"
       + (sub.length ? '<div class="s">' + sub.join(" · ") + "</div>" : "") + "</div></div>";

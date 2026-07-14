@@ -223,6 +223,34 @@
         </span>
       </a>
 
+      <a class="tool" href="clinica.html">
+        <span class="stat" id="stMed">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/><path d="M12 12v6M9 15h6"/>
+          </svg>
+        </div>
+        <h2>La cartella clinica</h2>
+        <p>Le schede di tutti, con gli esami archiviati e le note. I referti restano privati.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a class="tool" href="scanner.html">
+        <span class="stat" id="stScan">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><path d="M3 12h18"/>
+          </svg>
+        </div>
+        <h2>Lo scanner</h2>
+        <p>Fotografi un documento e diventa un PDF diritto e leggibile, da archiviare o mandare.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
     </div>
 
     <div class="install" id="install">
@@ -311,6 +339,18 @@ function loadStats() {
     if (!r.data.length) { $("stExp").textContent = "nessun dato"; return; }
     var tot = r.data.reduce(function (s, x) { return s + Math.abs(Number(x.amount)); }, 0);
     $("stExp").textContent = fmtEur(tot) + " · " + MESI_BREVI[m];
+  });
+
+  /* cartella clinica: quanti referti archiviati */
+  sb.from("medical_records").select("id", { count: "exact", head: true }).then(function (r) {
+    if (r.error) { $("stMed").textContent = "\u2014"; return; }
+    $("stMed").textContent = r.count ? (r.count + (r.count === 1 ? " referto" : " referti")) : "nessun referto";
+  });
+
+  /* scanner: quanti documenti */
+  sb.from("scans").select("id", { count: "exact", head: true }).then(function (r) {
+    if (r.error) { $("stScan").textContent = "\u2014"; return; }
+    $("stScan").textContent = r.count ? (r.count + (r.count === 1 ? " documento" : " documenti")) : "nessun documento";
   });
 }
 $("themeBtn").addEventListener("click", toggleTheme);
