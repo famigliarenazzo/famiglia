@@ -13,8 +13,22 @@
   /* Ottone leggibile come testo, e colore del testo sopra l'ottone.
      Nel tema scuro vanno bene così; il tema chiaro li ridefinisce, perché
      lì l'ottone su fondo chiaro sparirebbe. */
+  /* Ottone per il testo SUL FONDO VERDE: qui il chiaro va benissimo. */
   --brass-text: #C49A4A;
+  /* Ottone per il testo DENTRO UNA CARD (fondo carta chiaro). L'ottone
+     chiaro qui ha contrasto 2.17, cioe non si legge. Serve la versione
+     scura, la stessa che il tema chiaro usa ovunque. */
+  --brass-ink: #7A5A1E;
   --on-brass: #152620;
+  /* Il testo che sta SOPRA lo sfondo della pagina (non dentro una card).
+     Nel tema scuro il fondo e verde, quindi il testo va chiaro.
+     Nel tema chiaro il fondo e beige, quindi va scuro.
+     Senza questa variabile bisogna ricordarsi ogni volta di quale tema si
+     parla, e prima o poi ci si dimentica: e' esattamente cosi' che nascono
+     le scritte bianche su fondo beige. */
+  --on-bg: #F2EAD9;
+  --on-bg-soft: rgba(242, 234, 217, .68);
+  --field: #FBF7EE;
   --disp: "Bricolage Grotesque", system-ui, sans-serif;
   --body: "Hanken Grotesk", system-ui, sans-serif;
 }
@@ -27,9 +41,15 @@ html[data-theme="light"] {
   /* L'ottone su fondo chiaro non si legge (contrasto 1.96): nel tema chiaro
      serve una versione più scura per il testo e i bordi in evidenza. */
   --brass-text: #7A5A1E;
+  /* Nel tema chiaro il fondo pagina e gia chiaro: e lo stesso colore. */
+  --brass-ink: #7A5A1E;
   /* Il verde profondo qui diventa quasi bianco, quindi non può fare da testo
      sopra l'ottone: uso l'inchiostro. */
   --on-brass: #221F18;
+  /* Qui il fondo pagina e beige chiaro: il testo sopra deve essere scuro. */
+  --on-bg: #221F18;
+  --on-bg-soft: #5C523F;
+  --field: #FFFFFF;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,6 +107,11 @@ html[data-theme="light"] .top .sub { color: var(--rust); }
 }
 html[data-theme="light"] .btn-ghost { border-color: var(--paper-edge); color: var(--ink-soft); }
 .btn-ghost:hover { border-color: var(--brass); color: var(--brass-text); }
+/* Lo stesso pulsante, ma dentro un pannello: li il fondo e carta, e
+   l'ottone chiaro non si legge (contrasto 2.17). Serve quello scuro. */
+.sheet .btn-ghost:hover, .sheet-head .btn-ghost:hover, .sheet-foot .btn-ghost:hover {
+  color: var(--brass-ink);
+}
 .btn-ghost svg { width: 16px; height: 16px; }
 .btn-ghost.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
 .btn:disabled, .btn-ghost:disabled { opacity: .45; cursor: not-allowed; }
@@ -128,7 +153,14 @@ html[data-theme="light"] .btn-ghost { border-color: var(--paper-edge); color: va
 }
 .fld input, .fld select, .fld textarea {
   width: 100%; padding: 12px 14px; border: 1px solid var(--paper-edge);
-  border-radius: 12px; background: #FBF7EE; color: var(--ink);
+  border-radius: 12px;
+  /* Era un colore fisso (#FBF7EE): nel tema chiaro restava identico invece
+     di seguire il tema. Ora usa la variabile. */
+  background: var(--field); color: var(--ink);
+  /* 16px non e un capriccio: sotto i 16px iPhone INGRANDISCE la pagina da
+     solo quando tocchi un campo, e non c'e modo di impedirglielo se non
+     dandogli un testo abbastanza grande. Vedi la nota sullo zoom piu sotto. */
+  font-size: 16px;
 }
 .fld input:focus, .fld select:focus, .fld textarea:focus { outline: none; border-color: var(--brass); }
 .fld textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
@@ -217,7 +249,7 @@ html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-col
   border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;
   cursor:pointer;transition:background .12s,border-color .12s,color .12s;
 }
-.chipsel:hover{border-color:var(--brass)}
+.chipsel:hover{border-color:var(--brass);color:var(--brass-ink)}
 .chipsel.on{background:var(--brass);border-color:var(--brass);color:var(--on-brass);font-weight:600}
 .fld .hint{font-weight:400;opacity:.55;font-size:11px;margin-left:6px}
 
@@ -235,20 +267,20 @@ html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-col
   border: 1px solid var(--paper-edge); background: transparent; color: var(--ink-soft);
   border-radius: 99px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
 }
-.vb:hover { border-color: var(--brass); color: var(--brass-text); }
+.vb:hover { border-color: var(--brass); color: var(--brass-ink); }
 .vb.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
 
 .mrow .dsn {
   background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
   text-align: left; cursor: pointer; border-bottom: 1px dashed transparent;
 }
-.mrow .dsn:hover { border-bottom-color: var(--brass); color: var(--brass-text); }
+.mrow .dsn:hover { border-bottom-color: var(--brass); color: var(--brass-ink); }
 .msub { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin-top: 3px; }
 .mtag, .ntag {
   font-size: 11px; font-weight: 600; border-radius: 99px; padding: 2px 8px;
   background: var(--paper-soft); color: var(--ink-soft);
 }
-.mtag { background: color-mix(in srgb, var(--brass) 22%, transparent); color: var(--brass-text); }
+.mtag { background: color-mix(in srgb, var(--brass) 22%, transparent); color: var(--brass-ink); }
 
 .orig {
   font-size: 12px; line-height: 1.5; color: var(--ink-soft);
@@ -257,3 +289,42 @@ html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-col
 }
 .chk { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; margin-bottom: 15px; cursor: pointer; line-height: 1.45; }
 .chk input { width: auto; margin-top: 2px; flex-shrink: 0; }
+
+/* ---------- la rete di sicurezza dei contrasti ----------
+   Due regole che valgono ovunque, cosi non serve ricordarsene ogni volta.
+
+   1. Dentro un pannello (.sheet) il fondo e sempre carta: il testo va scuro.
+      Vale anche per il tema chiaro, dove la carta e bianca.
+   2. Il testo che sta direttamente sul fondo della pagina usa --on-bg, che
+      il tema definisce chiaro sul verde e scuro sul beige.
+
+   Senza queste, ogni elemento nuovo va valutato a mano e prima o poi
+   qualcosa finisce bianco su beige. */
+/* .sheet dichiara gia color: var(--ink), e in CSS il colore si eredita da
+   solo: basta questo perche tutto cio che sta dentro un pannello sia
+   leggibile, senza cancellare i colori voluti (il rosso delle uscite,
+   l'ottone degli accenti). Non serve un "color: inherit" a tappeto: quello
+   li spegnerebbe tutti. */
+
+/* I titoli e le note che stanno direttamente sullo sfondo della pagina. */
+.wrap > h2, .wrap > h3, .wrap > p { color: var(--on-bg); }
+
+/* ---------- lo zoom su telefono ----------
+   Il meta viewport chiede di non ingrandire, ma Safari su iPhone lo IGNORA
+   da anni, di proposito: Apple considera lo zoom un diritto di accessibilita
+   e non permette a una pagina di toglierlo. Quindi:
+
+   · su Android il meta basta;
+   · su iPhone il pizzico a due dita resta possibile, e non c'e nulla da fare
+     senza rompere l'accessibilita;
+   · quello che si puo togliere ovunque, e che e la causa dello zoom
+     ACCIDENTALE, e il doppio tocco: qui sotto.
+
+   L'altra causa di zoom involontario e' il testo piccolo nei campi: se un
+   input ha meno di 16px, iPhone ingrandisce la pagina da solo quando lo
+   tocchi. Per questo i campi sono a 16px (vedi .fld input). */
+* { touch-action: manipulation; }
+
+/* Il pizzico resta possibile dove serve davvero: le anteprime dei documenti
+   e le foto. Toglierlo li sarebbe un dispetto. */
+.prev, .prev-img, .cov img, .bcard .cov img, #editCanvas { touch-action: auto; }

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>I documenti di casa · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* chip e righe: gli stessi della biblioteca */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+    background: var(--paper-soft); color: var(--ink-soft); border-radius: 99px; padding: 5px 11px;
+  }
+  .rows { margin-top: 16px; }
+  .row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--paper-edge); font-size: 13.5px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { width: 108px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+  .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
+
+  /* ---------- lo scadenzario ---------- */
+  .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .dcard {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-left: 4px solid var(--paper-edge);
+    border-radius: 14px; padding: 14px 15px; cursor: pointer; transition: .13s;
+  }
+  .dcard:hover { transform: translateY(-2px); border-color: var(--brass); }
+  .dcard.scaduto  { border-left-color: var(--rust); }
+  .dcard.urgente  { border-left-color: #C4703A; }
+  .dcard.vicino   { border-left-color: var(--brass); }
+  .dcard.ok       { border-left-color: #5C7B54; }
+  .dcard h4 { margin: 0 0 3px; font-size: 14.5px; color: var(--ink); }
+  .dcard .meta { font-size: 11.5px; color: var(--ink-soft); }
+  .dcard .when { margin-top: 9px; font-size: 13px; font-weight: 700; }
+  .dcard.scaduto .when { color: var(--rust); }
+  .dcard.urgente .when { color: #C4703A; }
+  .dcard .cost { float: right; font-weight: 600; font-size: 12.5px; color: var(--ink-soft); }
+
+  h3.sec { margin: 0 0 12px; font-size: 15px; color: var(--on-bg); }
+  .sec-sub { font-size: 12.5px; color: var(--on-bg); opacity: .6; margin: -6px 0 14px; }
+
+  /* ---------- le auto ---------- */
+  .cars { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 26px; }
+  .car {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: 14px; padding: 14px 15px; cursor: pointer; transition: .13s;
+  }
+  .car:hover { transform: translateY(-2px); border-color: var(--brass); }
+  .car h4 { margin: 0 0 2px; font-size: 15px; color: var(--ink); }
+  .car .plate {
+    display: inline-block; font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700;
+    background: var(--ink); color: var(--paper); border-radius: 5px; padding: 2px 7px; margin-top: 5px;
+  }
+  .car .sub { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+
+  /* ---------- l'archivio ---------- */
+  .docs { display: flex; flex-direction: column; gap: 9px; }
+  .doc {
+    display: flex; gap: 11px; align-items: center;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: 12px; padding: 11px 13px;
+  }
+  .doc .t { flex: 1; min-width: 0; cursor: pointer; }
+  .doc .t b { display: block; font-size: 14px; color: var(--ink); }
+  .doc .t span { font-size: 11.5px; color: var(--ink-soft); }
+  .doc .acts { display: flex; gap: 5px; flex-shrink: 0; }
+  .doc .acts button {
+    border: 1px solid var(--paper-edge); background: transparent; color: var(--ink-soft);
+    border-radius: 8px; padding: 5px 9px; font-size: 12px; cursor: pointer;
+  }
+  .doc .acts button:hover { border-color: var(--brass); color: var(--brass-ink); }
+
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .bar select, .bar input { flex: 0 1 auto; }
+  .empty-note { font-size: 13px; padding: 18px 0; text-align: center; color: var(--on-bg); opacity: .65; }
+  .in-card .empty-note { color: var(--ink-soft); opacity: 1; }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .f2 { grid-template-columns: 1fr; } }
+  .prev { width: 100%; height: 70vh; border: 0; border-radius: 12px; background: #fff; }
+  .prev-img { width: 100%; max-height: 70vh; object-fit: contain; border-radius: 12px; background: #fff; }
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
+
+  <h3 class="sec">Cosa scade</h3>
+  <p class="sec-sub" id="scadSub"></p>
+  <div class="board" id="board"></div>
+
+  <h3 class="sec">Le auto</h3>
+  <div class="cars" id="cars"></div>
+
+  <h3 class="sec">L’archivio</h3>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Cerca un documento…">
+    <select id="fKind"></select>
+    <select id="fState">
+      <option value="attivi">In corso</option>
+      <option value="tutti">Tutti</option>
+      <option value="archiviati">Archiviati</option>
+    </select>
+    <button class="btn-ghost" id="addCar">＋ Auto</button>
+    <button class="btn" id="addDoc">＋ Documento</button>
+  </div>
+  <div class="docs" id="docs"></div>
+</main>
+
+<!-- ============ documento ============ -->
+<div class="modal" id="dModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head"><h2 id="dTitle">Aggiungi un documento</h2><button class="x" id="dX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Che cos’è</label><input id="dName" placeholder="Assicurazione della Panda"></div>
+
+      <div class="f2">
+        <div class="fld"><label>Tipo</label>
+          <select id="dKind">
+            <option value="">— non indicato —</option>
+            <option>Assicurazione</option>
+            <option>Bollo</option>
+            <option>Revisione</option>
+            <option>Tagliando</option>
+            <option>Contratto</option>
+            <option>Garanzia</option>
+            <option>Bolletta</option>
+            <option>Documento d’identità</option>
+            <option>Casa</option>
+            <option>Altro</option>
+          </select>
+        </div>
+        <div class="fld"><label>Riguarda l’auto</label>
+          <select id="dCar"><option value="">— nessuna —</option></select>
+        </div>
+      </div>
+
+      <div class="f2">
+        <div class="fld"><label>Scade il <span class="opt">· il motivo di tutto</span></label>
+          <input type="date" id="dExp"></div>
+        <div class="fld"><label>Avvisami</label>
+          <select id="dRem">
+            <option value="7">7 giorni prima</option>
+            <option value="15">15 giorni prima</option>
+            <option value="30" selected>30 giorni prima</option>
+            <option value="60">60 giorni prima</option>
+            <option value="90">90 giorni prima</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="f2">
+        <div class="fld"><label>Intestato a</label><input id="dHolder" placeholder="Stefano"></div>
+        <div class="fld"><label>Fornitore</label><input id="dSup" placeholder="Prima Assicurazioni"></div>
+      </div>
+
+      <div class="f2">
+        <div class="fld"><label>Numero</label><input id="dNum" placeholder="Polizza n°…"></div>
+        <div class="fld"><label>Costo <span class="opt">· €</span></label>
+          <input id="dAmt" inputmode="decimal" placeholder="480,00"></div>
+      </div>
+
+      <div class="fld"><label>Il file <span class="opt">· PDF o foto</span></label>
+        <input type="file" id="dFile" accept="application/pdf,image/*"></div>
+      <div class="fld"><label>Note</label><textarea id="dNotes" rows="2"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="dCanc">Annulla</button>
+      <button class="btn" id="dSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ auto ============ -->
+<div class="modal" id="cModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="cTitle">Aggiungi un’auto</h2><button class="x" id="cX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Come la chiamate</label><input id="cName" placeholder="La Panda"></div>
+      <div class="f2">
+        <div class="fld"><label>Targa</label><input id="cPlate" placeholder="AB123CD" style="text-transform:uppercase"></div>
+        <div class="fld"><label>Anno</label><input id="cYear" placeholder="2019"></div>
+      </div>
+      <div class="f2">
+        <div class="fld"><label>Marca</label><input id="cMake" placeholder="Fiat"></div>
+        <div class="fld"><label>Modello</label><input id="cModel" placeholder="Panda"></div>
+      </div>
+      <div class="f2">
+        <div class="fld"><label>Chilometri</label><input id="cKm" inputmode="numeric" placeholder="86000"></div>
+        <div class="fld"><label>Segnati il</label><input type="date" id="cKmD"></div>
+      </div>
+      <div class="fld"><label>Telaio</label><input id="cVin"></div>
+      <div class="fld"><label>Note</label><textarea id="cNotes" rows="2"></textarea></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="cDel" style="margin-right:auto;color:var(--rust)">Elimina</button>
+      <button class="btn-ghost" id="cCanc">Annulla</button>
+      <button class="btn" id="cSave">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ scheda auto ============ -->
+<div class="modal" id="cvModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="cvTitle">Auto</h2>
+      <button class="btn-ghost" id="cvEdit" style="padding:8px 13px;font-size:13px">✏️ Modifica</button>
+      <button class="x" id="cvX">✕</button>
+    </div>
+    <div class="sheet-body in-card" id="cvBody"></div>
+    <div class="sheet-foot">
+      <button class="btn" id="cvAdd">＋ Aggiungi una scadenza</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ anteprima ============ -->
+<div class="modal" id="vModal" hidden>
+  <div class="sheet wide">
+    <div class="sheet-head">
+      <h2 id="vTitle">Documento</h2>
+      <button class="btn-ghost" id="vShare" style="padding:8px 13px;font-size:13px">↗️ Condividi</button>
+      <button class="x" id="vX">✕</button>
+    </div>
+    <div class="sheet-body in-card" id="vBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="famiglia.js"></script>
+<script>
+/* =====================================================================
+   I DOCUMENTI DI CASA
+
+   Il punto di questa sezione non e archiviare: e RICORDARE. Un contratto
+   sepolto in un cassetto e inutile quanto uno sepolto in un database.
+   Quello che serve e sapere che la revisione scade fra tre settimane
+   senza doverselo chiedere.
+
+   Le auto non hanno una tabella di scadenze tutta loro: le scadenze
+   dell'auto (bollo, assicurazione, revisione, tagliando) sono documenti
+   come gli altri, con un'etichetta che dice a quale auto appartengono.
+   Cosi lo scadenzario e uno solo, e non due che rischiano di dire cose
+   diverse.
+   ===================================================================== */
+
+$("top").innerHTML = toolHeader("I documenti di casa", "");
+
+var BUCKET = "privati";
+var docs = [], cars = [], viewCar = null, editDoc = null, editCar = null;
+
+/* ---------- date e scadenze ---------- */
+var GIORNO = 86400000;
+
+function oggi() {
+  var d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+/* Quanti giorni mancano. Negativo = gia scaduto. */
+function giorniA(data) {
+  if (!data) return null;
+  var p = String(data).slice(0, 10).split("-");
+  if (p.length !== 3) return null;
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return Math.round((d - oggi()) / GIORNO);
+}
+function fmtData(d) {
+  if (!d) return "—";
+  var p = String(d).slice(0, 10).split("-");
+  if (p.length !== 3) return d;
+  return p[2] + " " + MESI_BREVI[+p[1]].toLowerCase() + " " + p[0];
+}
+/* Detto come lo direbbe una persona. */
+function quando(g) {
+  if (g == null) return "senza scadenza";
+  if (g < -1) return "scaduto da " + (-g) + " giorni";
+  if (g === -1) return "scaduto ieri";
+  if (g === 0) return "scade oggi";
+  if (g === 1) return "scade domani";
+  if (g < 31) return "fra " + g + " giorni";
+  if (g < 60) return "fra circa un mese";
+  var m = Math.round(g / 30);
+  if (g < 365) return "fra circa " + m + " mesi";
+  return "fra piu di un anno";
+}
+/* La gravita, che decide il colore. */
+function stato(d) {
+  var g = giorniA(d.expires_on);
+  if (g == null) return "ok";
+  if (g < 0) return "scaduto";
+  if (g <= 7) return "urgente";
+  if (g <= (d.remind_days || 30)) return "vicino";
+  return "ok";
+}
+function carOf(id) { return cars.filter(function (c) { return c.id === id; })[0] || null; }
+
+/* ---------- lo scadenzario ---------- */
+function drawBoard() {
+  /* Solo cio che ha una scadenza, non archiviato, e che merita attenzione:
+     o e gia scaduto, o rientra nel preavviso che hai chiesto tu.
+     Il resto sta nell'archivio: metterlo qui sarebbe rumore. */
+  var att = docs.filter(function (d) {
+    if (d.archived || !d.expires_on) return false;
+    var g = giorniA(d.expires_on);
+    return g <= (d.remind_days || 30);
+  }).sort(function (a, b) {
+    return giorniA(a.expires_on) - giorniA(b.expires_on);
+  });
+
+  if (!att.length) {
+    var prossimo = docs.filter(function (d) { return !d.archived && d.expires_on; })
+      .sort(function (a, b) { return giorniA(a.expires_on) - giorniA(b.expires_on); })[0];
+    $("board").innerHTML = '<p class="empty-note">'
+      + (prossimo
+          ? "Nessuna scadenza vicina. La prossima è " + esc(prossimo.title)
+            + ", " + quando(giorniA(prossimo.expires_on)) + "."
+          : "Nessuna scadenza da tenere d’occhio.")
+      + "</p>";
+    $("scadSub").textContent = "";
+    return;
+  }
+
+  var scaduti = att.filter(function (d) { return giorniA(d.expires_on) < 0; }).length;
+  $("scadSub").textContent = scaduti
+    ? (scaduti === 1 ? "1 documento è già scaduto." : scaduti + " documenti sono già scaduti.")
+    : "Niente è scaduto, ma queste cose vanno rinnovate a breve.";
+
+  $("board").innerHTML = att.map(function (d) {
+    var g = giorniA(d.expires_on);
+    var c = carOf(d.car_id);
+    var meta = [d.kind, c ? c.name : null, d.supplier].filter(Boolean).join(" · ");
+    return '<div class="dcard ' + stato(d) + '" data-d="' + d.id + '">'
+      + (d.amount ? '<span class="cost">' + fmtEur(Math.abs(Number(d.amount))) + "</span>" : "")
+      + "<h4>" + esc(d.title) + "</h4>"
+      + '<div class="meta">' + esc(meta || "—") + "</div>"
+      + '<div class="when">' + esc(quando(g)) + "</div>"
+      + '<div class="meta" style="margin-top:2px">' + esc(fmtData(d.expires_on)) + "</div>"
+      + "</div>";
+  }).join("");
+
+  $("board").querySelectorAll("[data-d]").forEach(function (el) {
+    el.addEventListener("click", function () { openDoc(el.getAttribute("data-d")); });
+  });
+}
+
+/* ---------- le auto ---------- */
+function drawCars() {
+  if (!cars.length) {
+    $("cars").innerHTML = '<p class="empty-note">Nessuna auto. Aggiungine una per tenerne le scadenze.</p>';
+    return;
+  }
+  $("cars").innerHTML = cars.map(function (c) {
+    var suoi = docs.filter(function (d) { return d.car_id === c.id && !d.archived && d.expires_on; });
+    var pross = suoi.sort(function (a, b) { return giorniA(a.expires_on) - giorniA(b.expires_on); })[0];
+    var sub = pross
+      ? esc(pross.kind || pross.title) + " " + esc(quando(giorniA(pross.expires_on)))
+      : "nessuna scadenza registrata";
+    return '<div class="car" data-c="' + c.id + '">'
+      + "<h4>" + esc(c.name) + "</h4>"
+      + (c.plate ? '<span class="plate">' + esc(c.plate) + "</span>" : "")
+      + '<div class="sub">' + sub + "</div>"
+      + (c.km ? '<div class="sub">' + Number(c.km).toLocaleString("it-IT") + " km</div>" : "")
+      + "</div>";
+  }).join("");
+
+  $("cars").querySelectorAll("[data-c]").forEach(function (el) {
+    el.addEventListener("click", function () { openCar(el.getAttribute("data-c")); });
+  });
+}
+
+/* ---------- l'archivio ---------- */
+function drawDocs() {
+  var q = $("q").value.trim().toLowerCase();
+  var k = $("fKind").value;
+  var st = $("fState").value;
+
+  var list = docs.filter(function (d) {
+    if (st === "attivi" && d.archived) return false;
+    if (st === "archiviati" && !d.archived) return false;
+    if (k && d.kind !== k) return false;
+    if (q) {
+      var t = [d.title, d.kind, d.holder, d.supplier, d.number, d.notes].join(" ").toLowerCase();
+      if (t.indexOf(q) < 0) return false;
+    }
+    return true;
+  }).sort(function (a, b) {
+    /* prima cio che scade prima; chi non scade in fondo */
+    var ga = a.expires_on ? giorniA(a.expires_on) : 99999;
+    var gb = b.expires_on ? giorniA(b.expires_on) : 99999;
+    return ga - gb;
+  });
+
+  if (!list.length) {
+    $("docs").innerHTML = '<p class="empty-note">Nessun documento.</p>';
+    return;
+  }
+
+  $("docs").innerHTML = list.map(function (d) {
+    var c = carOf(d.car_id);
+    var bits = [];
+    if (d.kind) bits.push(esc(d.kind));
+    if (c) bits.push(esc(c.name));
+    if (d.supplier) bits.push(esc(d.supplier));
+    if (d.expires_on) bits.push(esc(quando(giorniA(d.expires_on))));
+    if (d.archived) bits.push("archiviato");
+    return '<div class="doc">'
+      + '<div class="t" data-open="' + d.id + '"><b>' + esc(d.title) + "</b>"
+      + "<span>" + bits.join(" · ") + "</span></div>"
+      + '<div class="acts">'
+      + (d.path ? '<button data-file="' + d.id + '">Apri</button>' : "")
+      + '<button data-edit="' + d.id + '">Modifica</button>'
+      + '<button data-arch="' + d.id + '">' + (d.archived ? "Ripristina" : "Archivia") + "</button>"
+      + '<button data-del="' + d.id + '">Elimina</button>'
+      + "</div></div>";
+  }).join("");
+
+  $("docs").querySelectorAll("[data-open]").forEach(function (b) {
+    b.addEventListener("click", function () { openDoc(b.getAttribute("data-open")); });
+  });
+  $("docs").querySelectorAll("[data-file]").forEach(function (b) {
+    b.addEventListener("click", function () { openFile(b.getAttribute("data-file")); });
+  });
+  $("docs").querySelectorAll("[data-edit]").forEach(function (b) {
+    b.addEventListener("click", function () { openDoc(b.getAttribute("data-edit")); });
+  });
+  $("docs").querySelectorAll("[data-arch]").forEach(function (b) {
+    b.addEventListener("click", function () { toggleArch(b.getAttribute("data-arch")); });
+  });
+  $("docs").querySelectorAll("[data-del]").forEach(function (b) {
+    b.addEventListener("click", function () { delDoc(b.getAttribute("data-del")); });
+  });
+}
+["q", "fKind", "fState"].forEach(function (id) {
+  $(id).addEventListener(id === "q" ? "input" : "change", drawDocs);
+});
+
+/* ---------- modulo documento ---------- */
+function fillCarSelect(sel, val) {
+  $(sel).innerHTML = '<option value="">— nessuna —</option>'
+    + cars.map(function (c) {
+      return '<option value="' + c.id + '"' + (c.id === val ? " selected" : "") + ">"
+        + esc(c.name) + "</option>";
+    }).join("");
+}
+
+function openDoc(id, carId) {
+  editDoc = id || null;
+  var d = id ? docs.filter(function (x) { return x.id === id; })[0] : null;
+  $("dTitle").textContent = d ? "Il documento" : "Aggiungi un documento";
+  $("dName").value   = d ? (d.title || "") : "";
+  $("dKind").value   = d ? (d.kind || "") : "";
+  $("dExp").value    = d && d.expires_on ? String(d.expires_on).slice(0, 10) : "";
+  $("dRem").value    = d ? String(d.remind_days || 30) : "30";
+  $("dHolder").value = d ? (d.holder || "") : "";
+  $("dSup").value    = d ? (d.supplier || "") : "";
+  $("dNum").value    = d ? (d.number || "") : "";
+  $("dAmt").value    = d && d.amount != null ? String(d.amount).replace(".", ",") : "";
+  $("dNotes").value  = d ? (d.notes || "") : "";
+  $("dFile").value   = "";
+  fillCarSelect("dCar", d ? d.car_id : (carId || ""));
+  $("dModal").hidden = false;
+}
+function closeDoc() { $("dModal").hidden = true; editDoc = null; }
+$("dX").addEventListener("click", closeDoc);
+$("dCanc").addEventListener("click", closeDoc);
+$("addDoc").addEventListener("click", function () { openDoc(null); });
+
+$("dSave").addEventListener("click", function () {
+  var name = $("dName").value.trim();
+  if (!name) { toast("Serve un nome"); return; }
+
+  var amt = $("dAmt").value.trim().replace(/\./g, "").replace(",", ".");
+  var data = {
+    title: name,
+    kind: $("dKind").value || null,
+    car_id: $("dCar").value || null,
+    expires_on: $("dExp").value || null,
+    remind_days: parseInt($("dRem").value, 10) || 30,
+    holder: $("dHolder").value.trim() || null,
+    supplier: $("dSup").value.trim() || null,
+    number: $("dNum").value.trim() || null,
+    amount: amt ? Number(amt) : null,
+    notes: $("dNotes").value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  if (data.amount != null && isNaN(data.amount)) {
+    toast("Il costo non è un numero"); return;
+  }
+
+  var f = $("dFile").files && $("dFile").files[0];
+  var b = $("dSave");
+  b.disabled = true;
+
+  var pre = f ? uploadPrivate(f, "documenti").then(function (up) {
+      data.path = up.path; data.mime = up.mime; data.size = up.size;
+    }) : Promise.resolve();
+
+  pre.then(function () {
+    return editDoc
+      ? guard(sb.from("documents").update(data).eq("id", editDoc), "doc")
+      : guard(sb.from("documents").insert(data), "doc");
+  }).then(function () {
+    closeDoc();
+    toast("Salvato");
+    return load();
+  }).catch(function () { })
+    .then(function () { b.disabled = false; });
+});
+
+/* Un file nell'archivio privato. I PDF non li comprimo. */
+function uploadPrivate(file, prefix) {
+  var isImg = /^image\//.test(file.type);
+  var prep = isImg ? compressImage(file, 1600, 0.8) : Promise.resolve(file);
+  return prep.then(function (blob) {
+    var ext = isImg ? "jpg" : (file.name.split(".").pop() || "bin").toLowerCase();
+    var path = prefix + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+    return sb.storage.from(BUCKET).upload(path, blob, {
+      contentType: isImg ? "image/jpeg" : (file.type || "application/octet-stream")
+    }).then(function (r) {
+      if (r.error) throw r.error;
+      return { path: path, mime: isImg ? "image/jpeg" : file.type, size: blob.size };
+    });
+  });
+}
+
+/* ---------- archivia / elimina ---------- */
+function toggleArch(id) {
+  var d = docs.filter(function (x) { return x.id === id; })[0];
+  if (!d) return;
+  guard(sb.from("documents").update({ archived: !d.archived }).eq("id", id), "arch")
+    .then(function () {
+      toast(d.archived ? "Ripristinato" : "Archiviato");
+      return load();
+    });
+}
+function delDoc(id) {
+  var d = docs.filter(function (x) { return x.id === id; })[0];
+  if (!d) return;
+  if (!confirm("Elimino «" + d.title + "»? Anche il file viene cancellato.")) return;
+  var pre = d.path ? sb.storage.from(BUCKET).remove([d.path]) : Promise.resolve();
+  pre.then(function () {
+    return sb.from("documents").delete().eq("id", id);
+  }).then(function (r) {
+    if (r && r.error) { toast("Non riesco a eliminarlo: " + r.error.message); return; }
+    toast("Eliminato");
+    return load();
+  });
+}
+
+/* ---------- il file ---------- */
+var viewDoc = null;
+function openFile(id) {
+  var d = docs.filter(function (x) { return x.id === id; })[0];
+  if (!d || !d.path) return;
+  viewDoc = d;
+  $("vTitle").textContent = d.title;
+  $("vBody").innerHTML = '<p class="empty-note">Apro…</p>';
+  $("vModal").hidden = false;
+
+  sb.storage.from(BUCKET).createSignedUrl(d.path, 3600).then(function (r) {
+    if (r.error) throw r.error;
+    var u = r.data.signedUrl;
+    d._url = u;
+    $("vBody").innerHTML = /^image\//.test(d.mime || "")
+      ? '<img class="prev-img" src="' + esc(u) + '" alt="">'
+      : '<iframe class="prev" src="' + esc(u) + '"></iframe>'
+        + '<p class="empty-note">Non si vede? <a href="' + esc(u) + '" target="_blank" rel="noopener">Aprilo in una scheda nuova</a>.</p>';
+  }).catch(function () {
+    $("vBody").innerHTML = '<p class="empty-note">Non riesco ad aprire il file.</p>';
+  });
+}
+$("vX").addEventListener("click", function () { $("vModal").hidden = true; viewDoc = null; });
+$("vModal").addEventListener("click", function (e) { if (e.target === $("vModal")) $("vModal").hidden = true; });
+
+$("vShare").addEventListener("click", function () {
+  if (!viewDoc) return;
+  var d = viewDoc;
+  /* Condivido il file, non il collegamento: quello scade fra un'ora. */
+  sb.storage.from(BUCKET).download(d.path).then(function (res) {
+    if (res.error) throw res.error;
+    var ext = /^image\//.test(d.mime || "") ? "jpg" : "pdf";
+    var file = new File([res.data], (d.title || "documento") + "." + ext,
+      { type: d.mime || "application/pdf" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      return navigator.share({ title: d.title, files: [file] });
+    }
+    var u = URL.createObjectURL(res.data);
+    var a = document.createElement("a");
+    a.href = u; a.download = file.name; a.click();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+    toast("Scaricato: ora puoi inviarlo");
+  }).catch(function (e) {
+    if (e && e.name === "AbortError") return;
+    toast("Non sono riuscito a condividere");
+  });
+});
+
+/* ---------- le auto: scheda e modulo ---------- */
+function openCar(id) {
+  var c = carOf(id);
+  if (!c) return;
+  viewCar = id;
+  $("cvTitle").textContent = c.name;
+
+  var rws = "";
+  function row(k, v) {
+    if (!v) return;
+    rws += '<div class="row"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>";
+  }
+  row("Targa", esc(c.plate));
+  row("Auto", esc([c.make, c.model, c.year].filter(Boolean).join(" ")));
+  row("Chilometri", c.km ? (Number(c.km).toLocaleString("it-IT") + " km"
+    + (c.km_date ? " · segnati il " + fmtData(c.km_date) : "")) : "");
+  row("Telaio", esc(c.vin));
+  row("Note", esc(c.notes));
+
+  var suoi = docs.filter(function (d) { return d.car_id === id; })
+    .sort(function (a, b) {
+      var ga = a.expires_on ? giorniA(a.expires_on) : 99999;
+      var gb = b.expires_on ? giorniA(b.expires_on) : 99999;
+      return ga - gb;
+    });
+
+  var lista = suoi.length
+    ? '<div class="docs" style="margin-top:10px">' + suoi.map(function (d) {
+        var st = d.expires_on ? quando(giorniA(d.expires_on)) : "senza scadenza";
+        return '<div class="doc"><div class="t" data-cd="' + d.id + '"><b>'
+          + esc(d.kind || d.title) + "</b><span>"
+          + esc(d.title) + " · " + esc(st)
+          + (d.amount ? " · " + fmtEur(Math.abs(Number(d.amount))) : "")
+          + "</span></div></div>";
+      }).join("") + "</div>"
+    : '<p class="empty-note">Nessuna scadenza registrata per quest’auto.</p>';
+
+  $("cvBody").innerHTML = '<div class="rows">' + (rws || "") + "</div>"
+    + '<h3 style="margin:20px 0 0;font-size:15px">Le scadenze</h3>' + lista;
+
+  $("cvBody").querySelectorAll("[data-cd]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("cvModal").hidden = true;
+      openDoc(b.getAttribute("data-cd"));
+    });
+  });
+
+  $("cvModal").hidden = false;
+}
+$("cvX").addEventListener("click", function () { $("cvModal").hidden = true; });
+$("cvModal").addEventListener("click", function (e) { if (e.target === $("cvModal")) $("cvModal").hidden = true; });
+$("cvAdd").addEventListener("click", function () {
+  $("cvModal").hidden = true;
+  openDoc(null, viewCar);
+});
+$("cvEdit").addEventListener("click", function () {
+  $("cvModal").hidden = true;
+  openCarForm(viewCar);
+});
+
+function openCarForm(id) {
+  editCar = id || null;
+  var c = id ? carOf(id) : null;
+  $("cTitle").textContent = c ? "Modifica l’auto" : "Aggiungi un’auto";
+  $("cName").value  = c ? (c.name || "") : "";
+  $("cPlate").value = c ? (c.plate || "") : "";
+  $("cMake").value  = c ? (c.make || "") : "";
+  $("cModel").value = c ? (c.model || "") : "";
+  $("cYear").value  = c ? (c.year || "") : "";
+  $("cKm").value    = c && c.km != null ? c.km : "";
+  $("cKmD").value   = c && c.km_date ? String(c.km_date).slice(0, 10) : "";
+  $("cVin").value   = c ? (c.vin || "") : "";
+  $("cNotes").value = c ? (c.notes || "") : "";
+  $("cDel").style.display = c ? "" : "none";
+  $("cModal").hidden = false;
+}
+function closeCar() { $("cModal").hidden = true; editCar = null; }
+$("cX").addEventListener("click", closeCar);
+$("cCanc").addEventListener("click", closeCar);
+$("addCar").addEventListener("click", function () { openCarForm(null); });
+
+$("cSave").addEventListener("click", function () {
+  var name = $("cName").value.trim();
+  if (!name) { toast("Serve un nome"); return; }
+  var km = $("cKm").value.trim().replace(/\D/g, "");
+  var data = {
+    name: name,
+    plate: $("cPlate").value.trim().toUpperCase() || null,
+    make: $("cMake").value.trim() || null,
+    model: $("cModel").value.trim() || null,
+    year: $("cYear").value.trim() || null,
+    km: km ? parseInt(km, 10) : null,
+    km_date: $("cKmD").value || null,
+    vin: $("cVin").value.trim() || null,
+    notes: $("cNotes").value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  var b = $("cSave");
+  b.disabled = true;
+  var q = editCar
+    ? guard(sb.from("cars").update(data).eq("id", editCar), "car")
+    : guard(sb.from("cars").insert(data), "car");
+  q.then(function () { closeCar(); toast("Salvato"); return load(); })
+    .catch(function () { })
+    .then(function () { b.disabled = false; });
+});
+
+$("cDel").addEventListener("click", function () {
+  if (!editCar) return;
+  var c = carOf(editCar);
+  var n = docs.filter(function (d) { return d.car_id === editCar; }).length;
+  if (!confirm("Elimino «" + c.name + "»?"
+    + (n ? " Anche le sue " + n + " scadenze verranno cancellate." : ""))) return;
+  sb.from("cars").delete().eq("id", editCar).then(function (r) {
+    if (r.error) { toast("Non riesco a eliminarla: " + r.error.message); return; }
+    closeCar();
+    toast("Eliminata");
+    return load();
+  });
+});
+
+/* ---------- caricamento ---------- */
+function load() {
+  return Promise.all([
+    sb.from("documents").select("*"),
+    sb.from("cars").select("*").order("pos")
+  ]).then(function (r) {
+    if (r[0].error) throw r[0].error;
+    if (r[1].error) throw r[1].error;
+    docs = r[0].data || [];
+    cars = r[1].data || [];
+
+    /* i tipi presenti, per il filtro */
+    var kinds = {};
+    docs.forEach(function (d) { if (d.kind) kinds[d.kind] = 1; });
+    var cur = $("fKind").value;
+    $("fKind").innerHTML = '<option value="">Tutti i tipi</option>'
+      + Object.keys(kinds).sort().map(function (k) {
+        return '<option value="' + esc(k) + '"' + (k === cur ? " selected" : "") + ">" + esc(k) + "</option>";
+      }).join("");
+
+    var att = docs.filter(function (d) { return !d.archived; }).length;
+    var sc = docs.filter(function (d) {
+      return !d.archived && d.expires_on && giorniA(d.expires_on) < 0;
+    }).length;
+    setStatus(sc ? "err" : "ok",
+      "<b>" + att + "</b> documenti in corso"
+      + (cars.length ? " · <b>" + cars.length + "</b> " + (cars.length === 1 ? "auto" : "auto") : "")
+      + (sc ? " · <b>" + sc + "</b> scaduti" : ""));
+
+    drawBoard();
+    drawCars();
+    drawDocs();
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("err", "Non riesco a leggere i dati. Hai eseguito <b>schema6.sql</b>?");
+  });
+}
+
+requireAuth().then(load);
+</script>
+</body>
+</html>

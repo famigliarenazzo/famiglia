@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Famiglia Catenazzo Renò</title>
 <meta name="theme-color" content="#1C3329">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,7 +37,7 @@
   .gate .lead { color: var(--paper-soft); font-size: 14.5px; margin-bottom: 28px; line-height: 1.55; }
   html[data-theme="light"] .gate .lead { color: var(--ink-soft); }
   .gate-form {
-    background: var(--paper); border-radius: 18px; padding: 22px 20px 20px;
+    background: var(--paper); color: var(--ink); border-radius: 18px; padding: 22px 20px 20px;
     box-shadow: 0 8px 34px var(--shadow); text-align: left;
   }
   .gate-form .fld:last-of-type { margin-bottom: 18px; }
@@ -113,7 +113,7 @@
   /* ---------- invito a installare ---------- */
   .install {
     display: none; align-items: center; gap: 13px; margin-top: 18px; padding: 14px 16px;
-    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: 14px;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge); border-radius: 14px;
     box-shadow: 0 4px 18px var(--shadow);
   }
   .install.on { display: flex; }
@@ -237,6 +237,20 @@
         </span>
       </a>
 
+      <a class="tool" href="documenti.html">
+        <span class="stat" id="stDoc">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M9 21v-8h6v8"/>
+          </svg>
+        </div>
+        <h2>I documenti di casa</h2>
+        <p>Contratti, garanzie, assicurazioni e le scadenze delle auto. Ti avvisa prima che scadano.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
       <a class="tool" href="scanner.html">
         <span class="stat" id="stScan">—</span>
         <div class="ic">
@@ -351,6 +365,34 @@ function loadStats() {
   sb.from("scans").select("id", { count: "exact", head: true }).then(function (r) {
     if (r.error) { $("stScan").textContent = "\u2014"; return; }
     $("stScan").textContent = r.count ? (r.count + (r.count === 1 ? " documento" : " documenti")) : "nessun documento";
+  });
+
+  /* documenti di casa: qui non conto, AVVISO. Il senso della sezione e
+     accorgersi di una scadenza senza doverla cercare, quindi se qualcosa
+     sta per scadere deve saltare all'occhio dal portale. */
+  sb.from("documents").select("expires_on,remind_days,archived").then(function (r) {
+    if (r.error) { $("stDoc").textContent = "\u2014"; return; }
+    var d = (r.data || []).filter(function (x) { return !x.archived && x.expires_on; });
+    var oggi = new Date();
+    oggi = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+    var scaduti = 0, vicini = 0;
+    d.forEach(function (x) {
+      var p = String(x.expires_on).slice(0, 10).split("-");
+      var g = Math.round((new Date(+p[0], +p[1] - 1, +p[2]) - oggi) / 86400000);
+      if (g < 0) scaduti++;
+      else if (g <= (x.remind_days || 30)) vicini++;
+    });
+    var el = $("stDoc");
+    if (scaduti) {
+      el.textContent = "\u26a0\ufe0f " + scaduti + (scaduti === 1 ? " scaduto" : " scaduti");
+      el.style.color = "var(--rust)";
+    } else if (vicini) {
+      el.textContent = vicini + (vicini === 1 ? " in scadenza" : " in scadenza");
+    } else if (d.length) {
+      el.textContent = "tutto in regola";
+    } else {
+      el.textContent = "nessun documento";
+    }
   });
 }
 $("themeBtn").addEventListener("click", toggleTheme);

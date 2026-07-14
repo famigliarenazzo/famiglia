@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Lo scanner · Famiglia Catenazzo Renò</title>
 <meta name="theme-color" content="#0d1117">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,10 +25,10 @@
   .row .v { color: var(--ink); flex: 1; line-height: 1.5; }
   .empty{
     border:1.5px dashed var(--forest-line);border-radius:16px;
-    padding:44px 20px;text-align:center;color:var(--paper);
+    padding:44px 20px;text-align:center;color:var(--on-bg);
   }
-  .empty h3{margin:0 0 6px;font-size:16px;color:var(--paper)}
-  .empty p{margin:0 0 18px;opacity:.7;font-size:13px;color:var(--paper)}
+  .empty h3{margin:0 0 6px;font-size:16px;color:var(--on-bg)}
+  .empty p{margin:0 0 18px;opacity:.7;font-size:13px;color:var(--on-bg)}
   .row-btn{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
   .pages{display:flex;flex-direction:column;gap:12px;margin-top:14px}
@@ -42,13 +42,13 @@
   .page-idx{font-size:11px;color:var(--ink-soft);letter-spacing:.08em}
   .page-name{font-weight:600;font-size:14px;margin:2px 0;color:var(--ink)}
   .page-sub{font-size:11px;color:var(--ink-soft)}
-  .auto-badge{font-size:10px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--brass) 25%,transparent);color:var(--brass-text);margin-left:5px;font-weight:600}
+  .auto-badge{font-size:10px;padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--brass) 25%,transparent);color:var(--brass-ink);margin-left:5px;font-weight:600}
   .page-actions{display:flex;flex-direction:column;gap:5px}
   .icon-btn{
     width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;
     border:1px solid var(--paper-edge);background:transparent;color:var(--ink-soft);cursor:pointer;
   }
-  .icon-btn:hover{border-color:var(--brass);color:var(--brass-text)}
+  .icon-btn:hover{border-color:var(--brass);color:var(--brass-ink)}
   .icon-btn svg{width:15px;height:15px;stroke-width:2;fill:none;stroke:currentColor}
   .icon-btn:disabled{opacity:.25;cursor:default}
 
@@ -63,8 +63,8 @@
     display:none;flex-direction:column;
   }
   .editor.open{display:flex}
-  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--forest-line);color:var(--paper)}
-  .ed-head b{color:var(--paper)}
+  .ed-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--forest-line);color:var(--on-bg)}
+  .ed-head b{color:var(--on-bg)}
   .ed-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
   .canvas-wrap{position:relative;touch-action:none;line-height:0}
   .canvas-wrap canvas{border-radius:8px;display:block}
@@ -78,7 +78,7 @@
   .ed-foot{padding:14px 16px;border-top:1px solid var(--forest-line)}
   .filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px}
   .filter{
-    border:1px solid var(--forest-line);background:transparent;color:var(--paper);
+    border:1px solid var(--forest-line);background:transparent;color:var(--on-bg);
     border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;white-space:nowrap;cursor:pointer;
   }
   .filter:hover{border-color:var(--brass)}
@@ -96,15 +96,17 @@
     border-radius:12px;padding:11px 13px;
   }
   .doc .acts button{color:var(--ink-soft)}
-  .doc .acts button:hover{border-color:var(--brass);color:var(--brass-text)}
+  .doc .acts button:hover{border-color:var(--brass);color:var(--brass-ink)}
   .doc .t{flex:1;min-width:0}
   .doc .t b{display:block;font-size:14px;color:var(--ink)}
   .doc .t span{font-size:11px;color:var(--ink-soft)}
   .doc .acts{display:flex;gap:5px}
   .doc .acts button{border:1px solid var(--paper-edge);background:transparent;color:inherit;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer}
   .ocr-note{font-size:11px;color:var(--ink-soft);margin-top:4px}
-  .empty-note{opacity:.6;font-size:13px;padding:16px 0;text-align:center;color:var(--paper)}
+  .empty-note{opacity:.6;font-size:13px;padding:16px 0;text-align:center;color:var(--on-bg)}
   .fld select,.fld input{width:100%}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.f2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -133,7 +135,7 @@
     </div>
   </div>
 
-  <h3 style="margin:26px 0 0;font-size:15px;color:var(--paper)">I documenti archiviati</h3>
+  <h3 style="margin:26px 0 0;font-size:15px;color:var(--on-bg)">I documenti archiviati</h3>
   <div class="saved" id="saved"></div>
 </main>
 
@@ -181,11 +183,57 @@
       </div>
 
       <div class="fld">
-        <label>Metti anche nella cartella clinica di…</label>
-        <select id="sPerson"><option value="">— no, è un documento normale —</option></select>
+        <label>Dove lo archivio</label>
+        <select id="sDest">
+          <option value="">Solo qui, fra le scansioni</option>
+          <option value="doc">Fra i documenti di casa \u2014 con una scadenza</option>
+          <option value="med">Nella cartella clinica di qualcuno</option>
+        </select>
       </div>
-      <div class="fld" id="sExamWrap" style="display:none">
-        <label>Nome dell’esame</label><input id="sExam" placeholder="Emocromo completo">
+
+      <!-- se va nei documenti di casa -->
+      <div id="sDocWrap" style="display:none">
+        <div class="f2">
+          <div class="fld"><label>Tipo</label>
+            <select id="sKind">
+              <option value="">\u2014 non indicato \u2014</option>
+              <option>Assicurazione</option>
+              <option>Bollo</option>
+              <option>Revisione</option>
+              <option>Tagliando</option>
+              <option>Contratto</option>
+              <option>Garanzia</option>
+              <option>Bolletta</option>
+              <option>Documento d\u2019identit\u00e0</option>
+              <option>Casa</option>
+              <option>Altro</option>
+            </select>
+          </div>
+          <div class="fld"><label>Riguarda l\u2019auto</label>
+            <select id="sCar"><option value="">\u2014 nessuna \u2014</option></select>
+          </div>
+        </div>
+        <div class="f2">
+          <div class="fld"><label>Scade il</label><input type="date" id="sExp"></div>
+          <div class="fld"><label>Avvisami</label>
+            <select id="sRem">
+              <option value="7">7 giorni prima</option>
+              <option value="15">15 giorni prima</option>
+              <option value="30" selected>30 giorni prima</option>
+              <option value="60">60 giorni prima</option>
+              <option value="90">90 giorni prima</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- se va nella cartella clinica -->
+      <div id="sMedWrap" style="display:none">
+        <div class="fld"><label>Di chi \u00e8</label>
+          <select id="sPerson"><option value="">\u2014 scegli \u2014</option></select>
+        </div>
+        <div class="fld"><label>Nome dell\u2019esame</label>
+          <input id="sExam" placeholder="Emocromo completo"></div>
       </div>
     </div>
     <div class="sheet-foot">
@@ -218,7 +266,7 @@ $("top").innerHTML = toolHeader("Lo scanner", "");
 
 var BUCKET = "privati";
 var MAXDIM = 1600;
-var pages = [], docs = [], people = [];
+var pages = [], docs = [], people = [], cars = [];
 var editingId = null, editCorners = null, dispScale = 1, dragIdx = -1;
 
 /* ---------------- foto in arrivo ---------------- */
@@ -593,14 +641,21 @@ function readText(onProgress) {
 $("saveBtn").onclick = function () {
   if (!pages.length) return;
   $("sName").value = "Documento del " + new Date().toLocaleDateString("it-IT");
-  $("sPerson").innerHTML = '<option value="">— no, è un documento normale —</option>'
+  $("sPerson").innerHTML = '<option value="">\u2014 scegli \u2014</option>'
     + people.map(function (p) { return '<option value="' + p.id + '">' + esc(p.name) + "</option>"; }).join("");
-  $("sExamWrap").style.display = "none";
+  $("sCar").innerHTML = '<option value="">\u2014 nessuna \u2014</option>'
+    + cars.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + "</option>"; }).join("");
+  $("sDest").value = "";
+  $("sDocWrap").style.display = "none";
+  $("sMedWrap").style.display = "none";
   $("sModal").hidden = false;
 };
-$("sPerson").addEventListener("change", function () {
-  $("sExamWrap").style.display = this.value ? "block" : "none";
-  if (this.value && !$("sExam").value) $("sExam").value = $("sName").value;
+/* Una sola scelta di destinazione: cosi non si puo chiedere per sbaglio
+   di archiviare la stessa scansione in due posti diversi. */
+$("sDest").addEventListener("change", function () {
+  $("sDocWrap").style.display = this.value === "doc" ? "block" : "none";
+  $("sMedWrap").style.display = this.value === "med" ? "block" : "none";
+  if (this.value === "med" && !$("sExam").value) $("sExam").value = $("sName").value;
 });
 function closeSave() { $("sModal").hidden = true; }
 $("sX").onclick = closeSave;
@@ -608,8 +663,11 @@ $("sCanc").onclick = closeSave;
 
 $("sSave").onclick = function () {
   var name = $("sName").value.trim() || "Documento";
-  var personId = $("sPerson").value;
+  var dest = $("sDest").value;
+  var personId = dest === "med" ? $("sPerson").value : "";
   var wantOcr = $("sOcr").checked;
+
+  if (dest === "med" && !personId) { toast("Scegli di chi \u00e8"); return; }
   var btn = $("sSave");
   btn.disabled = true;
 
@@ -640,21 +698,35 @@ $("sSave").onclick = function () {
         }), "scan").then(function () { return path; });
       });
   }).then(function (path) {
-    /* Se e un referto, lo metto anche nella cartella clinica: lo stesso
-       file, nessuna copia doppia. */
-    if (!personId) return;
-    return guard(sb.from("medical_records").insert({
-      person_id: personId,
-      title: $("sExam").value.trim() || name,
-      exam_date: new Date().toISOString().slice(0, 10),
-      path: path, mime: "application/pdf",
-      notes: "Scansionato con lo scanner"
-    }), "med");
+    /* Lo stesso file, nessuna copia doppia: qui creo solo il rimando
+       nella sezione giusta. */
+    if (dest === "med") {
+      return guard(sb.from("medical_records").insert({
+        person_id: personId,
+        title: $("sExam").value.trim() || name,
+        exam_date: new Date().toISOString().slice(0, 10),
+        path: path, mime: "application/pdf",
+        notes: "Scansionato con lo scanner"
+      }), "med");
+    }
+    if (dest === "doc") {
+      return guard(sb.from("documents").insert({
+        title: name,
+        kind: $("sKind").value || null,
+        car_id: $("sCar").value || null,
+        expires_on: $("sExp").value || null,
+        remind_days: parseInt($("sRem").value, 10) || 30,
+        path: path, mime: "application/pdf",
+        notes: "Scansionato con lo scanner"
+      }), "doc");
+    }
   }).then(function () {
     closeSave();
     pages = [];
     refresh();
-    toast(personId ? "Salvato, anche nella cartella clinica" : "Documento salvato");
+    toast(dest === "med" ? "Salvato, anche nella cartella clinica"
+        : dest === "doc" ? "Salvato, anche fra i documenti di casa"
+        : "Documento salvato");
     return load();
   }).catch(function (e) {
     console.error(e);
@@ -708,11 +780,14 @@ function drawDocs() {
 function load() {
   return Promise.all([
     sb.from("scans").select("*").order("created_at", { ascending: false }),
-    sb.from("people").select("id,name").order("pos")
+    sb.from("people").select("id,name").order("pos"),
+    sb.from("cars").select("id,name").order("pos")
   ]).then(function (r) {
     if (r[0].error) throw r[0].error;
     docs = r[0].data || [];
     people = (r[1].data) || [];
+    /* se schema6 non e ancora stato eseguito, semplicemente non ci sono auto */
+    cars = (r[2] && !r[2].error && r[2].data) ? r[2].data : [];
     setStatus("ok", docs.length
       ? ("<b>" + docs.length + "</b> " + (docs.length === 1 ? "documento archiviato" : "documenti archiviati"))
       : "Nessun documento archiviato");
