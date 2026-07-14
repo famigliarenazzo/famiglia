@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>La mia biblioteca · Famiglia Catenazzo Renò</title>
 <meta name="theme-color" content="#1C3329">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,7 +57,7 @@
 
   /* ---------- scaffale ---------- */
   .shelf {
-    background: var(--paper); border: 1px solid var(--paper-edge); border-radius: var(--r);
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge); border-radius: var(--r);
     padding: 20px 16px; box-shadow: 0 4px 20px var(--shadow);
     display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end;
   }
@@ -200,7 +200,7 @@
   .fl:has(input:checked) { background: color-mix(in srgb, var(--brass) 20%, transparent); border-color: var(--brass); color: var(--ink); }
   .flags input[type="text"] {
     padding: 8px 12px; border: 1px solid var(--paper-edge); border-radius: 10px;
-    background: #FBF7EE; color: var(--ink); width: 130px;
+    background: var(--field); color: var(--ink); width: 130px;
   }
   @media (max-width: 620px) {
     .fgrid { grid-template-columns: 1fr; }
