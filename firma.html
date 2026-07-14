@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Firma un documento · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  .drop {
+    border: 2px dashed var(--forest-line); border-radius: 16px;
+    padding: 44px 20px; text-align: center; cursor: pointer; color: var(--on-bg);
+  }
+  .drop:hover { border-color: var(--brass); }
+  .drop h3 { margin: 0 0 6px; font-size: 16px; }
+  .drop p { margin: 0 0 16px; opacity: .65; font-size: 13px; }
+
+  /* le firme salvate */
+  .sigs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .sig {
+    background: var(--paper); color: var(--ink); border: 1.5px solid var(--paper-edge);
+    border-radius: 12px; padding: 9px 12px; cursor: pointer; transition: .12s;
+    display: flex; align-items: center; gap: 10px; min-width: 130px;
+  }
+  .sig:hover { border-color: var(--brass); }
+  .sig.on { border-color: var(--brass); background: color-mix(in srgb, var(--brass) 14%, var(--paper)); }
+  .sig img { height: 30px; max-width: 90px; object-fit: contain; }
+  .sig .nm { font-size: 12.5px; font-weight: 700; }
+  .sig .del { margin-left: auto; opacity: .4; font-size: 12px; }
+  .sig .del:hover { opacity: 1; color: var(--rust); }
+
+  /* le pagine del PDF */
+  .pages { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .pg {
+    position: relative; line-height: 0; box-shadow: 0 6px 26px var(--shadow);
+    border-radius: 6px; overflow: hidden; background: #fff; max-width: 100%;
+  }
+  .pg canvas { display: block; max-width: 100%; height: auto; }
+  .pg .num {
+    position: absolute; top: 8px; left: 8px; z-index: 2;
+    background: rgba(12,22,17,.62); color: #F2EAD9; font-size: 11px; font-weight: 700;
+    border-radius: 6px; padding: 3px 8px; line-height: 1.4; pointer-events: none;
+  }
+
+  /* la firma appoggiata */
+  .drop-sig {
+    position: absolute; cursor: move; touch-action: none;
+    border: 1.5px dashed transparent; border-radius: 4px;
+  }
+  .drop-sig:hover, .drop-sig.sel { border-color: var(--brass); }
+  .drop-sig img { width: 100%; height: 100%; display: block; pointer-events: none; }
+  .drop-sig .grab {
+    position: absolute; right: -8px; bottom: -8px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--brass); border: 2px solid #fff;
+    cursor: nwse-resize; touch-action: none;
+  }
+  .drop-sig .rm {
+    position: absolute; right: -9px; top: -9px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--rust); color: #fff; border: 2px solid #fff;
+    font-size: 12px; line-height: 16px; text-align: center; cursor: pointer;
+  }
+  .drop-sig .grab, .drop-sig .rm { display: none; }
+  .drop-sig.sel .grab, .drop-sig.sel .rm { display: block; }
+
+  /* il riquadro per firmare */
+  .pad-wrap { background: #FFFDF7; border-radius: 14px; padding: 8px; }
+  #pad {
+    width: 100%; height: 190px; display: block; border-radius: 10px;
+    border: 1px dashed #C9BFA6; touch-action: none; cursor: crosshair;
+    background: repeating-linear-gradient(transparent, transparent 94px, #E4DAC4 94px, #E4DAC4 95px);
+  }
+  .pad-hint { font-size: 12px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  .hint-bar {
+    font-size: 12.5px; color: var(--on-bg); opacity: .7; margin-bottom: 14px; line-height: 1.5;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 10; padding: 10px 0;
+    background: linear-gradient(var(--forest) 65%, transparent);
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .empty-note { font-size: 13px; text-align: center; color: var(--on-bg); opacity: .65; padding: 14px 0; }
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
+
+  <div id="pre">
+    <p class="hint-bar">
+      Carica il PDF che hai ricevuto, appoggia la firma dove serve e riscaricalo firmato.
+      Il testo del documento resta intatto: la firma viene aggiunta sopra, non ridisegna nulla.
+    </p>
+    <div class="drop" id="drop">
+      <h3>Scegli il PDF da firmare</h3>
+      <p>Oppure trascinalo qui</p>
+      <button class="btn" id="pick">📄 Scegli un PDF</button>
+    </div>
+  </div>
+
+  <div id="work" hidden>
+    <div class="toolbar">
+      <button class="btn-ghost" id="back">← Cambia documento</button>
+      <button class="btn-ghost" id="newSig">✍️ Nuova firma</button>
+      <button class="btn" id="save">⬇️ Scarica firmato</button>
+    </div>
+
+    <p class="hint-bar" id="hint">
+      Scegli una firma qui sotto, poi <b>tocca il punto del documento</b> dove va messa.
+      Puoi spostarla, ridimensionarla dall’angolo, o toglierla con la ✕.
+    </p>
+
+    <div class="sigs" id="sigs"></div>
+    <div class="pages" id="pages"></div>
+  </div>
+</main>
+
+<!-- ============ disegna la firma ============ -->
+<div class="modal" id="pModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head"><h2>Firma qui</h2><button class="x" id="pX">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Di chi è</label><input id="pName" placeholder="Stefano"></div>
+      <div class="pad-wrap">
+        <canvas id="pad"></canvas>
+      </div>
+      <p class="pad-hint">Firma col dito sul telefono, o col mouse sul computer. Viene come con una penna: il tratto si assottiglia dove corri.</p>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-ghost" id="pUndo" style="margin-right:auto">↶ Annulla tratto</button>
+      <button class="btn-ghost" id="pClear">Pulisci</button>
+      <button class="btn" id="pSave">Salva la firma</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file" accept="application/pdf" hidden>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="famiglia.js"></script>
+<script src="firma.js"></script>
+<script>
+/* =====================================================================
+   FIRMARE UN DOCUMENTO
+
+   Due cose meritano una spiegazione.
+
+   1. LA FIRMA NON E UNA FOTOCOPIA DEL PDF.
+      Il modo facile per stampare una firma su un PDF e trasformare le
+      pagine in immagini e rifare il documento da capo. Funziona, ma il
+      testo smette di essere selezionabile e il file triplica di peso.
+      Qui uso pdf-lib, che scrive la firma DENTRO il documento senza
+      toccare il resto: il testo resta testo.
+
+   2. QUESTA E UNA FIRMA GRAFICA, NON UNA FIRMA DIGITALE.
+      Vale quanto una firma scansionata e rispedita via mail: per una
+      liberatoria dell'asilo, una disdetta, un consenso, va benissimo ed e
+      quello che fanno tutti. Per un rogito serve la firma qualificata
+      (SPID/CIE), che nessuna pagina web puo produrre. E giusto saperlo.
+   ===================================================================== */
+
+$("top").innerHTML = toolHeader("Firma un documento", "");
+
+var BUCKET = "privati";
+var sigs = [], sigSel = null, pdfBytes = null, pdfName = "documento";
+var pageEls = [], appoggiate = [], pad = null;
+
+/* ---------- le librerie, caricate solo quando servono ---------- */
+function loadScript(src) {
+  return new Promise(function (res, rej) {
+    var s = document.createElement("script");
+    s.src = src;
+    s.onload = res;
+    s.onerror = function () { rej(new Error("non riesco a caricare " + src)); };
+    document.head.appendChild(s);
+  });
+}
+var pdfjsP = null, pdflibP = null;
+function loadPdfJs() {
+  if (pdfjsP) return pdfjsP;
+  /* la 3.11 legacy: le versioni dalla 4 in su sono solo moduli, e su
+     Safari vecchi non si caricano con un <script> normale */
+  pdfjsP = loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js")
+    .then(function () {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
+      return window.pdfjsLib;
+    });
+  return pdfjsP;
+}
+function loadPdfLib() {
+  if (pdflibP) return pdflibP;
+  pdflibP = loadScript("https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js")
+    .then(function () { return window.PDFLib; });
+  return pdflibP;
+}
+
+/* ---------- le firme salvate ---------- */
+function drawSigs() {
+  if (!sigs.length) {
+    $("sigs").innerHTML = '<p class="empty-note">Nessuna firma salvata. Tocca «Nuova firma» per disegnarne una.</p>';
+    return;
+  }
+  $("sigs").innerHTML = sigs.map(function (s) {
+    return '<div class="sig' + (sigSel === s.id ? " on" : "") + '" data-s="' + s.id + '">'
+      + '<img src="' + esc(s._url || "") + '" alt="">'
+      + '<span class="nm">' + esc(s.name) + "</span>"
+      + '<span class="del" data-del="' + s.id + '">\u2715</span>'
+      + "</div>";
+  }).join("");
+
+  $("sigs").querySelectorAll("[data-s]").forEach(function (el) {
+    el.addEventListener("click", function (e) {
+      if (e.target.hasAttribute("data-del")) return;
+      var id = el.getAttribute("data-s");
+      sigSel = (sigSel === id) ? null : id;
+      drawSigs();
+    });
+  });
+  $("sigs").querySelectorAll("[data-del]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      delSig(b.getAttribute("data-del"));
+    });
+  });
+}
+
+function delSig(id) {
+  var s = sigs.filter(function (x) { return x.id === id; })[0];
+  if (!s || !confirm("Elimino la firma di " + s.name + "?")) return;
+  sb.storage.from(BUCKET).remove([s.path]).then(function () {
+    return sb.from("signatures").delete().eq("id", id);
+  }).then(function (r) {
+    if (r && r.error) { toast("Non riesco a eliminarla: " + r.error.message); return; }
+    if (sigSel === id) sigSel = null;
+    toast("Firma eliminata");
+    return load();
+  });
+}
+
+/* ---------- disegnare una firma ---------- */
+$("newSig").addEventListener("click", apriPad);
+function apriPad() {
+  $("pName").value = "";
+  $("pModal").hidden = false;
+  /* il canvas va dimensionato DOPO che il pannello e visibile, se no
+     misura zero e la firma esce sfocata */
+  setTimeout(function () {
+    var c = $("pad");
+    var r = c.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * dpr);
+    c.height = Math.round(r.height * dpr);
+    pad = new Firma(c, { min: 1.1 * dpr, max: 3.4 * dpr, vel: 26 });
+  }, 60);
+}
+function chiudiPad() { $("pModal").hidden = true; pad = null; }
+$("pX").addEventListener("click", chiudiPad);
+$("pClear").addEventListener("click", function () { if (pad) pad.pulisci(); });
+$("pUndo").addEventListener("click", function () { if (pad) pad.annullaUltimo(); });
+
+$("pSave").addEventListener("click", function () {
+  var nome = $("pName").value.trim();
+  if (!nome) { toast("Serve un nome"); return; }
+  if (!pad || pad.vuoto) { toast("Non hai ancora firmato"); return; }
+
+  var rit = pad.ritaglia(10);
+  if (!rit) { toast("Non hai ancora firmato"); return; }
+
+  var b = $("pSave");
+  b.disabled = true;
+  rit.toBlob(function (blob) {
+    var path = "firme/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + ".png";
+    sb.storage.from(BUCKET).upload(path, blob, { contentType: "image/png" })
+      .then(function (r) {
+        if (r.error) throw r.error;
+        return guard(sb.from("signatures").insert({ name: nome, path: path }), "sig");
+      })
+      .then(function () { chiudiPad(); toast("Firma salvata"); return load(); })
+      .catch(function () { toast("Non sono riuscito a salvarla"); })
+      .then(function () { b.disabled = false; });
+  }, "image/png");
+});
+
+/* ---------- caricare il PDF ---------- */
+$("pick").addEventListener("click", function () { $("file").click(); });
+$("drop").addEventListener("click", function () { $("file").click(); });
+$("drop").addEventListener("dragover", function (e) { e.preventDefault(); });
+$("drop").addEventListener("drop", function (e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) apriPdf(f);
+});
+$("file").addEventListener("change", function () {
+  var f = this.files && this.files[0];
+  if (f) apriPdf(f);
+  this.value = "";
+});
+
+function apriPdf(f) {
+  if (f.type !== "application/pdf") { toast("Serve un PDF"); return; }
+  pdfName = f.name.replace(/\.pdf$/i, "");
+  setStatus("", "Apro il documento…");
+
+  var fr = new FileReader();
+  fr.onload = function () {
+    pdfBytes = new Uint8Array(fr.result);
+    loadPdfJs().then(function (pdfjsLib) {
+      /* pdf.js consuma i byte che gli passo, quindi gliene do una copia:
+         gli originali mi servono intatti per scriverci la firma dopo. */
+      return pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
+    }).then(function (pdf) {
+      return renderPdf(pdf);
+    }).then(function () {
+      $("pre").hidden = true;
+      $("work").hidden = false;
+      setStatus("ok", esc(pdfName) + " · <b>" + pageEls.length + "</b> "
+        + (pageEls.length === 1 ? "pagina" : "pagine"));
+    }).catch(function (e) {
+      console.error(e);
+      setStatus("err", "Non riesco ad aprire il PDF. Se è protetto da password, toglila prima.");
+    });
+  };
+  fr.readAsArrayBuffer(f);
+}
+
+function renderPdf(pdf) {
+  $("pages").innerHTML = "";
+  pageEls = [];
+  appoggiate = [];
+
+  var n = pdf.numPages;
+  var chain = Promise.resolve();
+  for (var i = 1; i <= n; i++) {
+    (function (num) {
+      chain = chain.then(function () {
+        return pdf.getPage(num).then(function (p) {
+          /* 1.6 e un compromesso: abbastanza nitido per leggere dove
+             firmare, abbastanza leggero da non bloccare il telefono su un
+             documento di venti pagine. */
+          var vp = p.getViewport({ scale: 1.6 });
+          var c = document.createElement("canvas");
+          c.width = vp.width; c.height = vp.height;
+
+          var box = document.createElement("div");
+          box.className = "pg";
+          box.setAttribute("data-p", num);
+          box.innerHTML = '<span class="num">' + num + " / " + n + "</span>";
+          box.appendChild(c);
+          $("pages").appendChild(box);
+
+          pageEls.push({ num: num, box: box, w: vp.width, h: vp.height });
+          box.addEventListener("click", function (e) { appoggia(e, box, num); });
+
+          return p.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        });
+      });
+    })(i);
+  }
+  return chain;
+}
+
+/* ---------- appoggiare la firma ---------- */
+function appoggia(e, box, num) {
+  if (e.target.closest(".drop-sig")) return;      /* sto toccando una firma gia messa */
+  if (!sigSel) { toast("Scegli prima una firma qui sopra"); return; }
+
+  var s = sigs.filter(function (x) { return x.id === sigSel; })[0];
+  if (!s || !s._url) return;
+
+  var r = box.getBoundingClientRect();
+  /* in percentuale, non in pixel: cosi la posizione regge anche se la
+     pagina viene ridisegnata piu piccola su un telefono */
+  var px = (e.clientX - r.left) / r.width;
+  var py = (e.clientY - r.top) / r.height;
+
+  var el = document.createElement("div");
+  el.className = "drop-sig sel";
+  el.innerHTML = '<img src="' + esc(s._url) + '" alt="">'
+    + '<span class="rm">\u2715</span><span class="grab"></span>';
+
+  var largh = 0.22;                                /* 22% della larghezza pagina */
+  var alt = largh * (s._h / s._w) * (box.offsetWidth / box.offsetHeight);
+
+  var rec = {
+    id: "d" + Date.now() + Math.random().toString(36).slice(2, 5),
+    sig: s, page: num, el: el,
+    x: Math.max(0, Math.min(1 - largh, px - largh / 2)),
+    y: Math.max(0, Math.min(1 - alt, py - alt / 2)),
+    w: largh, h: alt
+  };
+  posiziona(rec);
+  box.appendChild(el);
+  appoggiate.push(rec);
+  attivaTrascinamento(rec, box);
+  selez(rec);
+}
+
+function posiziona(r) {
+  r.el.style.left = (r.x * 100) + "%";
+  r.el.style.top = (r.y * 100) + "%";
+  r.el.style.width = (r.w * 100) + "%";
+  r.el.style.height = (r.h * 100) + "%";
+}
+function selez(rec) {
+  appoggiate.forEach(function (a) { a.el.classList.toggle("sel", a === rec); });
+}
+
+function attivaTrascinamento(rec, box) {
+  var el = rec.el;
+
+  el.querySelector(".rm").addEventListener("click", function (e) {
+    e.stopPropagation();
+    el.remove();
+    appoggiate = appoggiate.filter(function (a) { return a !== rec; });
+  });
+
+  function pt(e) {
+    var t = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return { x: t.clientX, y: t.clientY };
+  }
+
+  /* spostamento */
+  function giu(e) {
+    if (e.target.classList.contains("grab") || e.target.classList.contains("rm")) return;
+    e.preventDefault(); e.stopPropagation();
+    selez(rec);
+    var p0 = pt(e), r = box.getBoundingClientRect();
+    var x0 = rec.x, y0 = rec.y;
+
+    function muovi(ev) {
+      var p = pt(ev);
+      rec.x = Math.max(0, Math.min(1 - rec.w, x0 + (p.x - p0.x) / r.width));
+      rec.y = Math.max(0, Math.min(1 - rec.h, y0 + (p.y - p0.y) / r.height));
+      posiziona(rec);
+      ev.preventDefault();
+    }
+    function su() {
+      window.removeEventListener("pointermove", muovi);
+      window.removeEventListener("pointerup", su);
+    }
+    window.addEventListener("pointermove", muovi, { passive: false });
+    window.addEventListener("pointerup", su);
+  }
+  el.addEventListener("pointerdown", giu, { passive: false });
+
+  /* ridimensionamento, mantenendo le proporzioni: una firma stirata si
+     riconosce a occhio nudo */
+  el.querySelector(".grab").addEventListener("pointerdown", function (e) {
+    e.preventDefault(); e.stopPropagation();
+    selez(rec);
+    var p0 = pt(e), r = box.getBoundingClientRect();
+    var w0 = rec.w, h0 = rec.h;
+
+    function muovi(ev) {
+      var p = pt(ev);
+      var dw = (p.x - p0.x) / r.width;
+      var nw = Math.max(0.05, Math.min(1 - rec.x, w0 + dw));
+      rec.w = nw;
+      rec.h = h0 * (nw / w0);
+      if (rec.y + rec.h > 1) rec.h = 1 - rec.y;
+      posiziona(rec);
+      ev.preventDefault();
+    }
+    function su() {
+      window.removeEventListener("pointermove", muovi);
+      window.removeEventListener("pointerup", su);
+    }
+    window.addEventListener("pointermove", muovi, { passive: false });
+    window.addEventListener("pointerup", su);
+  }, { passive: false });
+}
+
+/* ---------- scaricare il PDF firmato ---------- */
+$("save").addEventListener("click", function () {
+  if (!appoggiate.length) { toast("Non hai ancora appoggiato nessuna firma"); return; }
+
+  var b = $("save");
+  b.disabled = true; b.textContent = "Preparo…";
+
+  loadPdfLib().then(function (PDFLib) {
+    return PDFLib.PDFDocument.load(pdfBytes).then(function (doc) {
+      var pages = doc.getPages();
+
+      /* Le stesse firme possono comparire piu volte: le carico una volta
+         sola dentro il PDF e le riuso, cosi il file non si gonfia. */
+      var cache = {};
+      var chain = Promise.resolve();
+
+      appoggiate.forEach(function (a) {
+        chain = chain.then(function () {
+          if (cache[a.sig.id]) return cache[a.sig.id];
+          return fetch(a.sig._url).then(function (r) { return r.arrayBuffer(); })
+            .then(function (buf) { return doc.embedPng(buf); })
+            .then(function (img) { cache[a.sig.id] = img; return img; });
+        }).then(function (img) {
+          var p = pages[a.page - 1];
+          var size = p.getSize();
+
+          /* Le coordinate sono in percentuale, quindi valgono per qualunque
+             misura di pagina. Attenzione all'origine: nel PDF lo zero e in
+             BASSO a sinistra, nel browser in ALTO a sinistra. Va ribaltata,
+             se no la firma finisce a testa in giu nell'altra meta del foglio. */
+          var w = a.w * size.width;
+          var h = a.h * size.height;
+          var x = a.x * size.width;
+          var y = size.height - (a.y * size.height) - h;
+
+          p.drawImage(img, { x: x, y: y, width: w, height: h });
+        });
+      });
+
+      return chain.then(function () { return doc.save(); });
+    });
+  }).then(function (out) {
+    var blob = new Blob([out], { type: "application/pdf" });
+    var u = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = u;
+    a.download = pdfName + "_firmato.pdf";
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 5000);
+    toast("PDF firmato scaricato");
+  }).catch(function (e) {
+    console.error(e);
+    toast("Non sono riuscito a firmare: " + (e.message || "errore"));
+  }).then(function () {
+    b.disabled = false; b.textContent = "\u2b07\ufe0f Scarica firmato";
+  });
+});
+
+$("back").addEventListener("click", function () {
+  $("work").hidden = true;
+  $("pre").hidden = false;
+  pdfBytes = null;
+  appoggiate = [];
+  setStatus("ok", sigs.length + (sigs.length === 1 ? " firma salvata" : " firme salvate"));
+});
+
+/* ---------- caricamento ---------- */
+function load() {
+  return sb.from("signatures").select("*").order("created_at").then(function (r) {
+    if (r.error) throw r.error;
+    sigs = r.data || [];
+
+    /* le firme stanno nell'archivio privato: servono i collegamenti firmati */
+    return Promise.all(sigs.map(function (s) {
+      return sb.storage.from(BUCKET).createSignedUrl(s.path, 3600).then(function (u) {
+        if (u.error) return;
+        s._url = u.data.signedUrl;
+        /* misuro l'immagine: serve per non stirare la firma quando la appoggio */
+        return new Promise(function (res) {
+          var im = new Image();
+          im.onload = function () { s._w = im.width; s._h = im.height; res(); };
+          im.onerror = function () { s._w = 3; s._h = 1; res(); };
+          im.src = s._url;
+        });
+      });
+    }));
+  }).then(function () {
+    setStatus("ok", sigs.length
+      ? ("<b>" + sigs.length + "</b> " + (sigs.length === 1 ? "firma salvata" : "firme salvate"))
+      : "Nessuna firma: disegnane una prima di cominciare");
+    drawSigs();
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("err", "Non riesco a leggere i dati. Hai eseguito <b>schema7.sql</b>?");
+  });
+}
+
+requireAuth().then(load);
+</script>
+</body>
+</html>
