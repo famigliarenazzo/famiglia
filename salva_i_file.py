@@ -130,10 +130,16 @@ class Archivio:
         if dentro > 6:      # una rete di sicurezza contro i cicli
             return []
 
+        # Supabase vuole il prefisso CON la barra finale: chiedendo
+        # "referti" invece di "referti/" risponde con una lista vuota, e il
+        # salvataggio finisce senza errori e senza file. Era il bug per cui
+        # la cartella restava vuota nonostante i referti ci fossero.
+        prefisso = (cartella + "/") if cartella else ""
+
         r = self.s.post(
             f"{self.url}/storage/v1/object/list/{bucket}",
             json={
-                "prefix": cartella,
+                "prefix": prefisso,
                 "limit": 1000,
                 "offset": 0,
                 "sortBy": {"column": "name", "order": "asc"},
@@ -222,6 +228,11 @@ def main():
             sys.exit(1)
 
         if not files:
+            if bucket == BUCKET_PRIVATO:
+                print(f"\n  L'archivio «{bucket}» risulta VUOTO.")
+                print("  Se invece sai che ci sono dei file, quasi sempre e' la chiave:")
+                print("  con la chiave 'anon' l'archivio privato risulta vuoto invece di")
+                print("  dare errore. Controlla di aver usato la 'service_role' (secret).")
             continue
 
         print(f"\n  Archivio «{bucket}»: {len(files)} file")

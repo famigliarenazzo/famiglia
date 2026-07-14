@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Salva tutto · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  .card {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: var(--r); padding: 22px 24px; box-shadow: 0 4px 20px var(--shadow);
+    margin-bottom: 18px;
+  }
+  .card h3 { font-family: var(--disp); font-weight: 600; font-size: 17px; margin: 0 0 10px; color: var(--ink); }
+  .card p { font-size: 13.5px; line-height: 1.65; color: var(--ink-soft); margin: 0 0 12px; }
+  .card p:last-child { margin-bottom: 0; }
+  .card b { color: var(--ink); }
+
+  .conta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 16px 0; }
+  .box {
+    background: var(--paper-soft); color: var(--ink); border-radius: 12px;
+    padding: 13px 15px; text-align: center;
+  }
+  .box .n { font-family: var(--disp); font-weight: 600; font-size: 22px; color: var(--ink); }
+  .box .k { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-top: 3px; }
+
+  .barra { height: 8px; border-radius: 99px; background: var(--paper-edge); overflow: hidden; margin: 14px 0 8px; }
+  .barra span { display: block; height: 100%; width: 0; background: var(--brass); transition: width .2s; }
+  .avanz { font-size: 12.5px; color: var(--ink-soft); text-align: center; min-height: 18px; }
+
+  .nota {
+    background: color-mix(in srgb, var(--brass) 12%, transparent);
+    border-left: 3px solid var(--brass);
+    border-radius: 0 10px 10px 0; padding: 13px 16px; margin-top: 16px;
+  }
+  .nota p { color: var(--ink); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+
+<header class="top" id="top"></header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="dot"></span><span>Conto cosa c’è…</span></div>
+
+  <div class="card">
+    <h3>Che cosa salva</h3>
+    <p>
+      Il salvataggio automatico su GitHub copia le <b>tabelle</b>: ricette, libri, movimenti,
+      schede cliniche, elenco dei documenti. Cioè il testo.
+    </p>
+    <p>
+      Non copia i <b>file</b>: i PDF dei referti, le scansioni, le firme. Quelli esistono in
+      una copia sola, dentro Supabase. Questo pulsante li porta via tutti insieme, in un
+      unico archivio ZIP, insieme a una copia dei dati in formato leggibile.
+    </p>
+
+    <div class="conta" id="conta"></div>
+
+    <div class="barra"><span id="bar"></span></div>
+    <p class="avanz" id="avanz"></p>
+
+    <button class="btn" id="go" style="width:100%;justify-content:center">⬇️ Salva tutto sul mio computer</button>
+
+    <div class="nota">
+      <p>
+        Su iPhone lo ZIP finisce nei <b>File</b> (cartella Download). Su computer, nei
+        Download. Poi <b>copialo su un disco esterno o su una chiavetta</b>: un archivio che
+        vive in un posto solo non è un archivio, è un’attesa.
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Ogni quanto</h3>
+    <p>
+      Ogni due o tre mesi, o dopo aver archiviato qualcosa che conta: un referto, il contratto
+      della casa, l’assicurazione nuova. Non serve farlo ogni settimana.
+    </p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="famiglia.js"></script>
+<script>
+/* =====================================================================
+   SALVA TUTTO
+
+   Perche esiste questo tasto, visto che c'e gia lo script Python?
+   Perche lo script chiede la chiave 'service_role', che e una chiave da
+   amministratore: chi ce l'ha entra in tutto senza password. Tenerla in
+   giro, su un portatile di famiglia, e un rischio che non serve correre.
+
+   Qui invece si e gia dentro: si e fatto il login. Il browser puo leggere
+   i file esattamente come li legge la cartella clinica, con i permessi
+   normali. Nessuna chiave da amministratore, da nessuna parte.
+
+   Lo ZIP lo costruisco a mano, senza librerie: il formato e semplice, e
+   fare a meno di una dipendenza esterna significa una cosa in meno che si
+   puo rompere fra tre anni.
+   ===================================================================== */
+
+$("top").innerHTML = toolHeader("Salva tutto", "");
+
+var BUCKET = "privati";
+var TABELLE = ["recipes", "products", "books", "expenses", "expense_rules",
+               "expense_categories", "merchant_rules", "people",
+               "medical_records", "scans", "documents", "cars", "signatures"];
+
+/* ---------- lo ZIP, fatto a mano ----------
+   Un file ZIP e una sequenza di blocchi: per ogni file un'intestazione e i
+   dati, e alla fine un indice. Non comprimo (metodo 0, "stored"): i PDF e i
+   JPEG sono gia compressi, e comprimerli di nuovo non guadagna nulla ma
+   costerebbe secondi di attesa su un telefono. */
+
+var CRC = (function () {
+  var t = [];
+  for (var n = 0; n < 256; n++) {
+    var c = n;
+    for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(u8) {
+  var c = 0xFFFFFFFF;
+  for (var i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function Zip() { this.files = []; this.off = 0; this.parti = []; }
+
+Zip.prototype.aggiungi = function (nome, u8) {
+  var nb = new TextEncoder().encode(nome);
+  var crc = crc32(u8);
+
+  var h = new DataView(new ArrayBuffer(30));
+  h.setUint32(0, 0x04034b50, true);   /* firma */
+  h.setUint16(4, 20, true);           /* versione */
+  h.setUint16(6, 0x0800, true);       /* nomi in UTF-8 */
+  h.setUint16(8, 0, true);            /* nessuna compressione */
+  h.setUint16(10, 0, true);           /* ora */
+  h.setUint16(12, 0, true);           /* data */
+  h.setUint32(14, crc, true);
+  h.setUint32(18, u8.length, true);
+  h.setUint32(22, u8.length, true);
+  h.setUint16(26, nb.length, true);
+  h.setUint16(28, 0, true);
+
+  this.parti.push(new Uint8Array(h.buffer), nb, u8);
+  this.files.push({ nome: nb, crc: crc, size: u8.length, off: this.off });
+  this.off += 30 + nb.length + u8.length;
+};
+
+Zip.prototype.chiudi = function () {
+  var inizio = this.off, self = this;
+
+  this.files.forEach(function (f) {
+    var c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true);
+    c.setUint16(4, 20, true);
+    c.setUint16(6, 20, true);
+    c.setUint16(8, 0x0800, true);
+    c.setUint16(10, 0, true);
+    c.setUint16(12, 0, true);
+    c.setUint16(14, 0, true);
+    c.setUint32(16, f.crc, true);
+    c.setUint32(20, f.size, true);
+    c.setUint32(24, f.size, true);
+    c.setUint16(28, f.nome.length, true);
+    c.setUint16(30, 0, true);
+    c.setUint16(32, 0, true);
+    c.setUint16(34, 0, true);
+    c.setUint16(36, 0, true);
+    c.setUint32(38, 0, true);
+    c.setUint32(42, f.off, true);
+    self.parti.push(new Uint8Array(c.buffer), f.nome);
+    self.off += 46 + f.nome.length;
+  });
+
+  var fine = new DataView(new ArrayBuffer(22));
+  fine.setUint32(0, 0x06054b50, true);
+  fine.setUint16(4, 0, true);
+  fine.setUint16(6, 0, true);
+  fine.setUint16(8, this.files.length, true);
+  fine.setUint16(10, this.files.length, true);
+  fine.setUint32(12, this.off - inizio, true);
+  fine.setUint32(16, inizio, true);
+  fine.setUint16(20, 0, true);
+  this.parti.push(new Uint8Array(fine.buffer));
+
+  return new Blob(this.parti, { type: "application/zip" });
+};
+
+/* ---------- contare cosa c'e ---------- */
+var elenco = [];
+
+function conta() {
+  return listaFile("").then(function (f) {
+    elenco = f;
+    var byte = elenco.reduce(function (a, x) { return a + (x.size || 0); }, 0);
+    $("conta").innerHTML =
+      '<div class="box"><div class="n">' + elenco.length + '</div><div class="k">file</div></div>'
+      + '<div class="box"><div class="n">' + pesa(byte) + '</div><div class="k">da salvare</div></div>'
+      + '<div class="box"><div class="n">' + TABELLE.length + '</div><div class="k">tabelle</div></div>';
+    setStatus("ok", elenco.length
+      ? "Pronto: <b>" + elenco.length + "</b> file, " + pesa(byte)
+      : "Nessun file da salvare (ma i dati delle tabelle sì)");
+  }).catch(function (e) {
+    console.error(e);
+    setStatus("err", "Non riesco a leggere l’archivio.");
+  });
+}
+
+/* Scendo nelle sottocartelle: i referti stanno in "referti/", le scansioni
+   in "scansioni/", e cosi via. */
+function listaFile(cartella, dentro) {
+  dentro = dentro || 0;
+  if (dentro > 6) return Promise.resolve([]);
+
+  return sb.storage.from(BUCKET).list(cartella, { limit: 1000, sortBy: { column: "name", order: "asc" } })
+    .then(function (r) {
+      if (r.error) throw r.error;
+      var out = [], sotto = [];
+      (r.data || []).forEach(function (v) {
+        if (!v.name) return;
+        var p = cartella ? (cartella + "/" + v.name) : v.name;
+        /* le cartelle non hanno id */
+        if (!v.id) sotto.push(listaFile(p, dentro + 1));
+        else out.push({ path: p, size: (v.metadata && v.metadata.size) || 0 });
+      });
+      if (!sotto.length) return out;
+      return Promise.all(sotto).then(function (gruppi) {
+        gruppi.forEach(function (g) { out = out.concat(g); });
+        return out;
+      });
+    });
+}
+
+function pesa(n) {
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(0) + " KB";
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+  return (n / 1073741824).toFixed(2) + " GB";
+}
+
+/* ---------- il salvataggio ---------- */
+$("go").addEventListener("click", function () {
+  var b = $("go");
+  b.disabled = true;
+
+  var zip = new Zip();
+  var oggi = new Date().toISOString().slice(0, 10);
+  var totale = elenco.length + TABELLE.length;
+  var fatti = 0;
+
+  function avanti(cosa) {
+    fatti++;
+    var pc = Math.round(fatti / totale * 100);
+    $("bar").style.width = pc + "%";
+    $("avanz").textContent = cosa + "  ·  " + pc + "%";
+  }
+
+  /* 1. le tabelle, in JSON leggibile */
+  var chain = Promise.resolve();
+  TABELLE.forEach(function (t) {
+    chain = chain.then(function () {
+      return sb.from(t).select("*").then(function (r) {
+        /* una tabella che non esiste (schema non eseguito) non deve far
+           fallire tutto il salvataggio */
+        var dati = (r.error || !r.data) ? [] : r.data;
+        var txt = JSON.stringify(dati, null, 2);
+        zip.aggiungi("dati/" + t + ".json", new TextEncoder().encode(txt));
+        avanti(t);
+      });
+    });
+  });
+
+  /* 2. i file, uno per uno.
+     Uno alla volta e non tutti insieme: su un telefono, venti download in
+     parallelo con dentro dei PDF da due mega fanno finire la memoria. */
+  elenco.forEach(function (f) {
+    chain = chain.then(function () {
+      return sb.storage.from(BUCKET).download(f.path).then(function (r) {
+        if (r.error) throw r.error;
+        return r.data.arrayBuffer();
+      }).then(function (buf) {
+        zip.aggiungi("file/" + f.path, new Uint8Array(buf));
+        avanti(f.path.split("/").pop());
+      }).catch(function (e) {
+        console.warn("saltato", f.path, e);
+        avanti("(saltato) " + f.path.split("/").pop());
+      });
+    });
+  });
+
+  /* 3. un foglietto che spiega cosa c'e dentro, per il te stesso di fra
+     dieci anni che apre questo ZIP e non ricorda piu niente */
+  chain.then(function () {
+    var nota = [
+      "SALVATAGGIO FAMIGLIA CATENAZZO RENO",
+      "Fatto il " + new Date().toLocaleString("it-IT"),
+      "",
+      "COSA C'E DENTRO",
+      "",
+      "  file/     i documenti veri: i PDF dei referti, le scansioni,",
+      "            le firme. Si aprono con un lettore PDF qualunque,",
+      "            non serve nessun programma speciale.",
+      "",
+      "  dati/     le tabelle in formato JSON: ricette, libri, movimenti,",
+      "            schede cliniche, documenti, auto. E testo semplice: si",
+      "            legge con un editor di testo, e si puo reimportare.",
+      "",
+      "I nomi dei file dentro file/ sono quelli che il database usa nei",
+      "suoi collegamenti: incrociando dati/medical_records.json con la",
+      "cartella file/ si risale a quale referto e di chi.",
+      "",
+      "Questo archivio contiene DATI SANITARI di minori. Tienilo in un",
+      "posto sicuro."
+    ].join("\n");
+    zip.aggiungi("LEGGIMI.txt", new TextEncoder().encode(nota));
+
+    var blob = zip.chiudi();
+    var u = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = u;
+    a.download = "famiglia-salvataggio-" + oggi + ".zip";
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 8000);
+
+    $("bar").style.width = "100%";
+    $("avanz").textContent = "Fatto: " + pesa(blob.size);
+    toast("Salvataggio scaricato");
+  }).catch(function (e) {
+    console.error(e);
+    toast("Qualcosa è andato storto: " + (e.message || "errore"));
+  }).then(function () {
+    b.disabled = false;
+  });
+});
+
+requireAuth().then(conta);
+</script>
+</body>
+</html>
