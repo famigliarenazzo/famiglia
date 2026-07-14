@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Firma un documento · Famiglia Catenazzo Renò</title>
+<title>Compila e firma · Famiglia Catenazzo Renò</title>
 <meta name="theme-color" content="#0d1117">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -85,6 +85,30 @@
     display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
   }
   .empty-note { font-size: 13px; text-align: center; color: var(--on-bg); opacity: .65; padding: 14px 0; }
+  h3.sec { margin: 0; font-size: 15px; color: var(--on-bg); }
+  .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  #pre h3.sec { margin-bottom: 10px; }
+  #sigSec { margin-bottom: 26px; }
+  #formBox { margin-bottom: 22px; }
+  .fields {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: 14px; padding: 16px 18px 4px;
+  }
+  .badge-ok {
+    font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 3px 10px;
+    background: color-mix(in srgb, var(--brass) 22%, transparent); color: var(--brass-ink);
+  }
+  .chk { display: flex; gap: 9px; align-items: center; font-size: 13.5px; margin-bottom: 15px; cursor: pointer; color: var(--ink); }
+  .chk input { width: auto; flex-shrink: 0; }
+  #mText.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
+
+  /* il testo appoggiato a mano */
+  .drop-txt {
+    width: auto !important; height: auto !important;
+    white-space: nowrap; padding: 1px 3px;
+  }
+  .drop-txt .tx { color: #16213B; font-family: Helvetica, Arial, sans-serif; line-height: 1.15; }
+  .drop-txt .grab { cursor: ns-resize; }
 </style>
 </head>
 <body>
@@ -94,31 +118,56 @@
 <main class="wrap">
   <div class="status" id="status"><span class="dot"></span><span>Carico…</span></div>
 
+  <!-- Le firme di casa: stanno FUORI dal documento, perche esistono da sole.
+       Prima il tasto per crearle era dentro la parte nascosta, e non si
+       poteva fare una firma senza aver prima caricato un PDF: assurdo. -->
+  <section id="sigSec">
+    <div class="sec-head">
+      <h3 class="sec">Le firme di casa</h3>
+      <button class="btn-ghost" id="newSig">✍️ Nuova firma</button>
+    </div>
+    <div class="sigs" id="sigs"></div>
+  </section>
+
   <div id="pre">
+    <h3 class="sec">Il documento</h3>
     <p class="hint-bar">
-      Carica il PDF che hai ricevuto, appoggia la firma dove serve e riscaricalo firmato.
-      Il testo del documento resta intatto: la firma viene aggiunta sopra, non ridisegna nulla.
+      Carica il PDF che hai ricevuto: se è un modulo con campi da compilare li trovo da solo,
+      altrimenti puoi scrivere e firmare appoggiando il testo dove serve.
+      Il documento originale resta intatto.
     </p>
     <div class="drop" id="drop">
-      <h3>Scegli il PDF da firmare</h3>
+      <h3>Scegli il PDF</h3>
       <p>Oppure trascinalo qui</p>
-      <button class="btn" id="pick">📄 Scegli un PDF</button>
+      <span class="btn" id="pick">📄 Scegli un PDF</span>
     </div>
   </div>
 
   <div id="work" hidden>
     <div class="toolbar">
       <button class="btn-ghost" id="back">← Cambia documento</button>
-      <button class="btn-ghost" id="newSig">✍️ Nuova firma</button>
-      <button class="btn" id="save">⬇️ Scarica firmato</button>
+      <button class="btn-ghost" id="mText">⌨️ Scrivi</button>
+      <button class="btn" id="save">⬇️ Scarica</button>
+    </div>
+
+    <!-- I moduli con campi veri: li compilo davvero, non ci appoggio sopra. -->
+    <div id="formBox" hidden>
+      <div class="sec-head">
+        <h3 class="sec">I campi del modulo</h3>
+        <span class="badge-ok" id="formN"></span>
+      </div>
+      <p class="hint-bar">
+        Questo PDF ha dei campi veri: li compilo dentro, come se scrivessi nel modulo.
+        Il risultato è pulito e allineato, molto meglio di un testo appoggiato sopra.
+      </p>
+      <div class="fields" id="fields"></div>
     </div>
 
     <p class="hint-bar" id="hint">
-      Scegli una firma qui sotto, poi <b>tocca il punto del documento</b> dove va messa.
+      Scegli una firma qui sopra, poi <b>tocca il punto del documento</b> dove va messa.
       Puoi spostarla, ridimensionarla dall’angolo, o toglierla con la ✕.
     </p>
 
-    <div class="sigs" id="sigs"></div>
     <div class="pages" id="pages"></div>
   </div>
 </main>
@@ -167,39 +216,99 @@
       (SPID/CIE), che nessuna pagina web puo produrre. E giusto saperlo.
    ===================================================================== */
 
-$("top").innerHTML = toolHeader("Firma un documento", "");
+$("top").innerHTML = toolHeader("Compila e firma", "");
 
 var BUCKET = "privati";
 var sigs = [], sigSel = null, pdfBytes = null, pdfName = "documento";
 var pageEls = [], appoggiate = [], pad = null;
 
 /* ---------- le librerie, caricate solo quando servono ---------- */
-function loadScript(src) {
-  return new Promise(function (res, rej) {
-    var s = document.createElement("script");
-    s.src = src;
-    s.onload = res;
-    s.onerror = function () { rej(new Error("non riesco a caricare " + src)); };
-    document.head.appendChild(s);
-  });
-}
+/* Piu fonti in fila: se una CDN e lenta o bloccata, passo alla successiva.
+   Prima ne usavo una sola, e se non rispondeva il caricamento moriva in
+   silenzio. E lo stesso elenco che le spese usano da mesi senza problemi. */
+var PDF_SOURCES = [
+  { lib: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js",
+    worker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js" },
+  { lib: "https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.min.js",
+    worker: "https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js" },
+  { lib: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+    worker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" }
+];
 var pdfjsP = null, pdflibP = null;
+
 function loadPdfJs() {
   if (pdfjsP) return pdfjsP;
-  /* la 3.11 legacy: le versioni dalla 4 in su sono solo moduli, e su
-     Safari vecchi non si caricano con un <script> normale */
-  pdfjsP = loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js")
-    .then(function () {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js";
-      return window.pdfjsLib;
-    });
+  pdfjsP = new Promise(function (resolve, reject) {
+    var i = 0;
+    function prova() {
+      if (i >= PDF_SOURCES.length) {
+        pdfjsP = null;
+        reject(new Error("nessuna fonte raggiungibile"));
+        return;
+      }
+      var src = PDF_SOURCES[i++];
+      var sc = document.createElement("script");
+      var fatto = false;
+      var timer = setTimeout(function () {
+        if (fatto) return;
+        fatto = true; sc.remove(); prova();
+      }, 12000);
+      sc.src = src.lib;
+      sc.onload = function () {
+        if (fatto) return;
+        fatto = true; clearTimeout(timer);
+        var lib = window.pdfjsLib;
+        if (!lib || !lib.getDocument) { prova(); return; }
+        lib.GlobalWorkerOptions.workerSrc = src.worker;
+        resolve(lib);
+      };
+      sc.onerror = function () {
+        if (fatto) return;
+        fatto = true; clearTimeout(timer); sc.remove(); prova();
+      };
+      document.head.appendChild(sc);
+    }
+    prova();
+  });
   return pdfjsP;
 }
+
+var PDFLIB_SOURCES = [
+  "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js",
+  "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"
+];
 function loadPdfLib() {
   if (pdflibP) return pdflibP;
-  pdflibP = loadScript("https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js")
-    .then(function () { return window.PDFLib; });
+  pdflibP = new Promise(function (resolve, reject) {
+    var i = 0;
+    function prova() {
+      if (i >= PDFLIB_SOURCES.length) {
+        pdflibP = null;
+        reject(new Error("nessuna fonte raggiungibile"));
+        return;
+      }
+      var sc = document.createElement("script");
+      var fatto = false;
+      var timer = setTimeout(function () {
+        if (fatto) return;
+        fatto = true; sc.remove(); prova();
+      }, 12000);
+      sc.src = PDFLIB_SOURCES[i++];
+      sc.onload = function () {
+        if (fatto) return;
+        fatto = true; clearTimeout(timer);
+        if (!window.PDFLib || !window.PDFLib.PDFDocument) { prova(); return; }
+        resolve(window.PDFLib);
+      };
+      sc.onerror = function () {
+        if (fatto) return;
+        fatto = true; clearTimeout(timer); sc.remove(); prova();
+      };
+      document.head.appendChild(sc);
+    }
+    prova();
+  });
   return pdflibP;
 }
 
@@ -291,7 +400,10 @@ $("pSave").addEventListener("click", function () {
 });
 
 /* ---------- caricare il PDF ---------- */
-$("pick").addEventListener("click", function () { $("file").click(); });
+/* Il bottone sta DENTRO il riquadro tratteggiato: se ascoltano il click
+   tutti e due, il selettore dei file si apre due volte e la seconda
+   apertura annulla la prima. Il file veniva scelto e poi perso.
+   Un solo gestore, sul riquadro: il bottone e solo un'etichetta. */
 $("drop").addEventListener("click", function () { $("file").click(); });
 $("drop").addEventListener("dragover", function (e) { e.preventDefault(); });
 $("drop").addEventListener("drop", function (e) {
@@ -306,7 +418,10 @@ $("file").addEventListener("change", function () {
 });
 
 function apriPdf(f) {
-  if (f.type !== "application/pdf") { toast("Serve un PDF"); return; }
+  /* Alcuni browser non compilano il tipo: guardo anche il nome, se no
+     rifiuterei un PDF perfettamente valido. */
+  var pare = f.type === "application/pdf" || /\.pdf$/i.test(f.name || "");
+  if (!pare) { toast("Serve un file PDF"); return; }
   pdfName = f.name.replace(/\.pdf$/i, "");
   setStatus("", "Apro il documento…");
 
@@ -320,13 +435,25 @@ function apriPdf(f) {
     }).then(function (pdf) {
       return renderPdf(pdf);
     }).then(function () {
+      /* Il PDF ha campi compilabili veri? Se si, e molto meglio riempirli
+         che appoggiarci sopra del testo: il risultato e allineato e pulito. */
+      return cercaCampi();
+    }).then(function () {
       $("pre").hidden = true;
       $("work").hidden = false;
       setStatus("ok", esc(pdfName) + " · <b>" + pageEls.length + "</b> "
         + (pageEls.length === 1 ? "pagina" : "pagine"));
     }).catch(function (e) {
       console.error(e);
-      setStatus("err", "Non riesco ad aprire il PDF. Se è protetto da password, toglila prima.");
+      /* Distinguo i due motivi: se non arriva la libreria non e colpa del
+         PDF, e dirgli "documento illeggibile" lo manderebbe a cercare il
+         problema nel posto sbagliato. */
+      var rete = /fonte|network|load|script/i.test(e && e.message || "");
+      setStatus("err", rete
+        ? "Non riesco a caricare il lettore PDF. Puo succedere senza connessione, o se una rete blocca le librerie esterne. Riprova."
+        : "Non riesco ad aprire il PDF (" + esc(e && e.message || "file non valido")
+          + "). Se e protetto da password, toglila prima.");
+      toast("Il documento non si apre");
     });
   };
   fr.readAsArrayBuffer(f);
@@ -370,8 +497,16 @@ function renderPdf(pdf) {
 
 /* ---------- appoggiare la firma ---------- */
 function appoggia(e, box, num) {
-  if (e.target.closest(".drop-sig")) return;      /* sto toccando una firma gia messa */
-  if (!sigSel) { toast("Scegli prima una firma qui sopra"); return; }
+  if (e.target.closest(".drop-sig")) return;      /* sto toccando qualcosa gia appoggiato */
+
+  if (modoTesto) { appoggiaTesto(e, box, num); return; }
+
+  if (!sigSel) {
+    toast(campi.length
+      ? "Compila i campi qui sopra, o scegli una firma"
+      : "Scegli una firma qui sopra, o tocca \u00abScrivi\u00bb");
+    return;
+  }
 
   var s = sigs.filter(function (x) { return x.id === sigSel; })[0];
   if (!s || !s._url) return;
@@ -479,69 +614,317 @@ function attivaTrascinamento(rec, box) {
   }, { passive: false });
 }
 
+
+/* =====================================================================
+   I CAMPI DEL MODULO
+
+   Molti moduli (iscrizioni, deleghe, autocertificazioni) sono PDF con
+   campi veri: cliccandoci sopra si scrive dentro. Quando ci sono, e
+   sbagliato appoggiare del testo sopra: si finisce sempre fuori riga o
+   sopra la stampa. Li compilo davvero.
+
+   Quando NON ci sono (il modulo e solo carta stampata), allora si
+   appoggia il testo, come si fa con la firma.
+   ===================================================================== */
+
+var campi = [];        /* i campi trovati nel PDF */
+var valori = {};       /* cosa ci scrivi tu */
+var testi = [];        /* i testi appoggiati a mano, per i moduli senza campi */
+var modoTesto = false;
+
+function cercaCampi() {
+  campi = [];
+  return loadPdfLib().then(function (PDFLib) {
+    return PDFLib.PDFDocument.load(pdfBytes);
+  }).then(function (doc) {
+    var f;
+    try { f = doc.getForm(); } catch (e) { return; }
+    var lista;
+    try { lista = f.getFields(); } catch (e) { return; }
+
+    lista.forEach(function (c) {
+      var tipo = c.constructor.name;
+      var nome = c.getName();
+      if (tipo === "PDFTextField") campi.push({ nome: nome, tipo: "testo" });
+      else if (tipo === "PDFCheckBox") campi.push({ nome: nome, tipo: "casella" });
+      else if (tipo === "PDFDropdown" || tipo === "PDFOptionList") {
+        var opz = [];
+        try { opz = c.getOptions(); } catch (e) { }
+        campi.push({ nome: nome, tipo: "scelta", opzioni: opz });
+      } else if (tipo === "PDFRadioGroup") {
+        var o = [];
+        try { o = c.getOptions(); } catch (e) { }
+        campi.push({ nome: nome, tipo: "scelta", opzioni: o });
+      }
+    });
+  }).catch(function (e) {
+    console.warn("campi non leggibili", e);
+    campi = [];
+  }).then(function () {
+    disegnaCampi();
+  });
+}
+
+/* Il nome tecnico del campo ("modulo.cf", "txtNomeBambino") non e leggibile:
+   lo ripulisco per mostrarlo come una domanda normale. */
+function etichetta(nome) {
+  var t = String(nome).split(".").pop();
+  t = t.replace(/[_\-]+/g, " ")
+       .replace(/([a-z])([A-Z])/g, "$1 $2")
+       .replace(/^(txt|fld|chk|cmb|field)\s*/i, "")
+       .replace(/\s+/g, " ")
+       .trim();
+  if (!t) t = nome;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function disegnaCampi() {
+  if (!campi.length) {
+    $("formBox").hidden = true;
+    $("hint").innerHTML = "Questo PDF non ha campi compilabili: \u00e8 carta stampata. "
+      + "Usa <b>Scrivi</b> per appoggiare il testo dove serve, e le firme qui sopra per firmarlo.";
+    return;
+  }
+  $("formBox").hidden = false;
+  $("formN").textContent = campi.length + (campi.length === 1 ? " campo" : " campi");
+
+  $("fields").innerHTML = campi.map(function (c, i) {
+    var id = "cf" + i;
+    if (c.tipo === "casella") {
+      return '<label class="chk"><input type="checkbox" id="' + id + '" data-c="' + i + '">'
+        + "<span>" + esc(etichetta(c.nome)) + "</span></label>";
+    }
+    if (c.tipo === "scelta" && c.opzioni && c.opzioni.length) {
+      return '<div class="fld"><label>' + esc(etichetta(c.nome)) + "</label>"
+        + '<select id="' + id + '" data-c="' + i + '">'
+        + '<option value="">\u2014 non indicato \u2014</option>'
+        + c.opzioni.map(function (o) { return '<option>' + esc(o) + "</option>"; }).join("")
+        + "</select></div>";
+    }
+    return '<div class="fld"><label>' + esc(etichetta(c.nome)) + "</label>"
+      + '<input type="text" id="' + id + '" data-c="' + i + '"></div>';
+  }).join("");
+
+  $("fields").querySelectorAll("[data-c]").forEach(function (el) {
+    var i = +el.getAttribute("data-c");
+    var ev = el.type === "checkbox" ? "change" : "input";
+    el.addEventListener(ev, function () {
+      valori[campi[i].nome] = el.type === "checkbox" ? el.checked : el.value;
+    });
+  });
+}
+
+/* ---------- il testo appoggiato (moduli senza campi) ---------- */
+$("mText").addEventListener("click", function () {
+  modoTesto = !modoTesto;
+  sigSel = null;
+  drawSigs();
+  $("mText").classList.toggle("on", modoTesto);
+  toast(modoTesto
+    ? "Tocca il documento nel punto dove vuoi scrivere"
+    : "Modalita scrittura disattivata");
+});
+
+function appoggiaTesto(e, box, num) {
+  var txt = prompt("Cosa scrivo?");
+  if (!txt || !txt.trim()) return;
+
+  var r = box.getBoundingClientRect();
+  var px = (e.clientX - r.left) / r.width;
+  var py = (e.clientY - r.top) / r.height;
+
+  var el = document.createElement("div");
+  el.className = "drop-sig drop-txt sel";
+  el.innerHTML = '<span class="tx">' + esc(txt.trim()) + "</span>"
+    + '<span class="rm">\u2715</span><span class="grab"></span>';
+
+  var rec = {
+    id: "t" + Date.now(),
+    testo: txt.trim(), page: num, el: el, tipo: "testo",
+    x: Math.max(0, Math.min(0.95, px)),
+    y: Math.max(0, Math.min(0.97, py)),
+    size: 0.013                     /* altezza del carattere, in frazione di pagina */
+  };
+  el.style.left = (rec.x * 100) + "%";
+  el.style.top = (rec.y * 100) + "%";
+  el.style.fontSize = (rec.size * box.offsetHeight) + "px";
+
+  box.appendChild(el);
+  testi.push(rec);
+  trascinaTesto(rec, box);
+}
+
+function trascinaTesto(rec, box) {
+  var el = rec.el;
+  el.querySelector(".rm").addEventListener("click", function (e) {
+    e.stopPropagation();
+    el.remove();
+    testi = testi.filter(function (t) { return t !== rec; });
+  });
+  function pt(e) {
+    var t = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    return { x: t.clientX, y: t.clientY };
+  }
+  el.addEventListener("pointerdown", function (e) {
+    if (e.target.classList.contains("grab") || e.target.classList.contains("rm")) return;
+    e.preventDefault(); e.stopPropagation();
+    var p0 = pt(e), r = box.getBoundingClientRect();
+    var x0 = rec.x, y0 = rec.y;
+    function muovi(ev) {
+      var p = pt(ev);
+      rec.x = Math.max(0, Math.min(0.99, x0 + (p.x - p0.x) / r.width));
+      rec.y = Math.max(0, Math.min(0.99, y0 + (p.y - p0.y) / r.height));
+      el.style.left = (rec.x * 100) + "%";
+      el.style.top = (rec.y * 100) + "%";
+      ev.preventDefault();
+    }
+    function su() {
+      window.removeEventListener("pointermove", muovi);
+      window.removeEventListener("pointerup", su);
+    }
+    window.addEventListener("pointermove", muovi, { passive: false });
+    window.addEventListener("pointerup", su);
+  }, { passive: false });
+
+  /* la maniglia cambia la dimensione del carattere */
+  el.querySelector(".grab").addEventListener("pointerdown", function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var p0 = pt(e), s0 = rec.size;
+    function muovi(ev) {
+      var p = pt(ev);
+      rec.size = Math.max(0.006, Math.min(0.05, s0 + (p.y - p0.y) / 4000));
+      el.style.fontSize = (rec.size * box.offsetHeight) + "px";
+      ev.preventDefault();
+    }
+    function su() {
+      window.removeEventListener("pointermove", muovi);
+      window.removeEventListener("pointerup", su);
+    }
+    window.addEventListener("pointermove", muovi, { passive: false });
+    window.addEventListener("pointerup", su);
+  }, { passive: false });
+}
+
 /* ---------- scaricare il PDF firmato ---------- */
 $("save").addEventListener("click", function () {
-  if (!appoggiate.length) { toast("Non hai ancora appoggiato nessuna firma"); return; }
+  var qualcosa = appoggiate.length || testi.length
+    || Object.keys(valori).some(function (k) { return valori[k] !== "" && valori[k] !== false; });
+  if (!qualcosa) { toast("Non hai ancora scritto o firmato niente"); return; }
 
   var b = $("save");
-  b.disabled = true; b.textContent = "Preparo…";
+  b.disabled = true; b.textContent = "Preparo\u2026";
 
   loadPdfLib().then(function (PDFLib) {
     return PDFLib.PDFDocument.load(pdfBytes).then(function (doc) {
-      var pages = doc.getPages();
 
-      /* Le stesse firme possono comparire piu volte: le carico una volta
-         sola dentro il PDF e le riuso, cosi il file non si gonfia. */
-      var cache = {};
+      /* ---------- 1. i campi veri del modulo ---------- */
       var chain = Promise.resolve();
-
-      appoggiate.forEach(function (a) {
-        chain = chain.then(function () {
-          if (cache[a.sig.id]) return cache[a.sig.id];
-          return fetch(a.sig._url).then(function (r) { return r.arrayBuffer(); })
-            .then(function (buf) { return doc.embedPng(buf); })
-            .then(function (img) { cache[a.sig.id] = img; return img; });
-        }).then(function (img) {
-          var p = pages[a.page - 1];
-          var size = p.getSize();
-
-          /* Le coordinate sono in percentuale, quindi valgono per qualunque
-             misura di pagina. Attenzione all'origine: nel PDF lo zero e in
-             BASSO a sinistra, nel browser in ALTO a sinistra. Va ribaltata,
-             se no la firma finisce a testa in giu nell'altra meta del foglio. */
-          var w = a.w * size.width;
-          var h = a.h * size.height;
-          var x = a.x * size.width;
-          var y = size.height - (a.y * size.height) - h;
-
-          p.drawImage(img, { x: x, y: y, width: w, height: h });
+      if (campi.length) {
+        var form = doc.getForm();
+        campi.forEach(function (c) {
+          var v = valori[c.nome];
+          if (v == null || v === "" || v === false) return;
+          try {
+            if (c.tipo === "casella") {
+              if (v) form.getCheckBox(c.nome).check();
+            } else if (c.tipo === "scelta") {
+              form.getDropdown(c.nome).select(String(v));
+            } else {
+              form.getTextField(c.nome).setText(String(v));
+            }
+          } catch (err) {
+            /* un campo che non accetta il valore non deve far fallire tutto:
+               salvo il resto e lo segnalo alla fine */
+            console.warn("campo non compilabile:", c.nome, err);
+          }
         });
-      });
+      }
 
-      return chain.then(function () { return doc.save(); });
+      /* ---------- 2. i testi appoggiati a mano ---------- */
+      return chain.then(function () {
+        if (!testi.length) return;
+        return doc.embedFont(PDFLib.StandardFonts.Helvetica).then(function (font) {
+          testi.forEach(function (t) {
+            var p = doc.getPages()[t.page - 1];
+            var size = p.getSize();
+            var fs = t.size * size.height;
+            /* l'origine del PDF e in basso: ribalto la y, e scendo di
+               un'altezza di riga perche il testo si appoggia sulla base */
+            var y = size.height - (t.y * size.height) - fs;
+            p.drawText(t.testo, {
+              x: t.x * size.width,
+              y: y,
+              size: fs,
+              font: font,
+              color: PDFLib.rgb(0.09, 0.13, 0.23)   /* blu-nero, come una penna */
+            });
+          });
+        });
+      }).then(function () {
+
+        /* ---------- 3. le firme ---------- */
+        var pages = doc.getPages();
+        var cache = {};
+        var c2 = Promise.resolve();
+        appoggiate.forEach(function (a) {
+          c2 = c2.then(function () {
+            if (cache[a.sig.id]) return cache[a.sig.id];
+            return fetch(a.sig._url).then(function (r) { return r.arrayBuffer(); })
+              .then(function (buf) { return doc.embedPng(buf); })
+              .then(function (img) { cache[a.sig.id] = img; return img; });
+          }).then(function (img) {
+            var p = pages[a.page - 1];
+            var size = p.getSize();
+            var w = a.w * size.width;
+            var h = a.h * size.height;
+            var x = a.x * size.width;
+            var y = size.height - (a.y * size.height) - h;
+            p.drawImage(img, { x: x, y: y, width: w, height: h });
+          });
+        });
+        return c2;
+      }).then(function () {
+
+        /* ---------- 4. appiattire ----------
+           I campi compilati restano modificabili da chiunque riapra il PDF.
+           Per un modulo che consegni all'asilo non va bene: appiattendoli
+           diventano testo fisso, e nessuno puo alterare quello che hai
+           dichiarato dopo che l'hai firmato. */
+        if (campi.length) {
+          try { doc.getForm().flatten(); } catch (e) { console.warn("flatten", e); }
+        }
+        return doc.save();
+      });
     });
   }).then(function (out) {
     var blob = new Blob([out], { type: "application/pdf" });
     var u = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = u;
-    a.download = pdfName + "_firmato.pdf";
+    a.download = pdfName + "_compilato.pdf";
     a.click();
     setTimeout(function () { URL.revokeObjectURL(u); }, 5000);
-    toast("PDF firmato scaricato");
+    toast("PDF scaricato");
   }).catch(function (e) {
     console.error(e);
-    toast("Non sono riuscito a firmare: " + (e.message || "errore"));
+    toast("Non sono riuscito a preparare il PDF: " + (e.message || "errore"));
   }).then(function () {
-    b.disabled = false; b.textContent = "\u2b07\ufe0f Scarica firmato";
+    b.disabled = false; b.textContent = "\u2b07\ufe0f Scarica";
   });
 });
 
 $("back").addEventListener("click", function () {
   $("work").hidden = true;
   $("pre").hidden = false;
+  $("pages").innerHTML = "";
   pdfBytes = null;
   appoggiate = [];
+  testi = [];
+  campi = [];
+  valori = {};
+  modoTesto = false;
+  $("mText").classList.remove("on");
+  $("formBox").hidden = true;
   setStatus("ok", sigs.length + (sigs.length === 1 ? " firma salvata" : " firme salvate"));
 });
 
