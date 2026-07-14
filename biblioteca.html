@@ -15,33 +15,12 @@
 <link rel="stylesheet" href="famiglia.css">
 <style>
   /* ---------- barra strumenti ---------- */
-  .bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .search { position: relative; flex: 1; min-width: 190px; }
-  .search input {
-    width: 100%; padding: 11px 38px 11px 40px; border-radius: 12px;
-    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
-    color: var(--paper);
-  }
-  html[data-theme="light"] .search input { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
-  .search input::placeholder { color: color-mix(in srgb, var(--paper-soft) 60%, transparent); }
-  .search input:focus { outline: none; border-color: var(--brass); }
-  .search .mag {
-    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
-    width: 16px; height: 16px; color: var(--brass); pointer-events: none;
-  }
   .search .clr {
     position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
     width: 26px; height: 26px; border-radius: 8px; display: none;
     align-items: center; justify-content: center; color: var(--paper-soft); font-size: 13px;
   }
   .search.has .clr { display: flex; }
-  .fsel {
-    padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; max-width: 165px;
-    border: 1px solid var(--forest-line); background: color-mix(in srgb, var(--forest-deep) 55%, transparent);
-    color: var(--paper);
-  }
-  html[data-theme="light"] .fsel { background: var(--paper); color: var(--ink); border-color: var(--paper-edge); }
-  .fsel:focus { outline: none; border-color: var(--brass); }
   .vtoggle { display: flex; border: 1px solid var(--forest-line); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
   html[data-theme="light"] .vtoggle { border-color: var(--paper-edge); }
   .vtoggle button {

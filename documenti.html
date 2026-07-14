@@ -77,8 +77,6 @@
   }
   .doc .acts button:hover { border-color: var(--brass); color: var(--brass-ink); }
 
-  .bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
-  .bar select, .bar input { flex: 0 1 auto; }
   .empty-note { font-size: 13px; padding: 18px 0; text-align: center; color: var(--on-bg); opacity: .65; }
   .in-card .empty-note { color: var(--ink-soft); opacity: 1; }
   .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -103,9 +101,12 @@
 
   <h3 class="sec">L’archivio</h3>
   <div class="bar">
-    <input type="search" id="q" placeholder="Cerca un documento…">
-    <select id="fKind"></select>
-    <select id="fState">
+    <div class="search">
+      <svg class="mag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" id="q" placeholder="Cerca un documento…" autocomplete="off">
+    </div>
+    <select class="fsel" id="fKind"></select>
+    <select class="fsel" id="fState">
       <option value="attivi">In corso</option>
       <option value="tutti">Tutti</option>
       <option value="archiviati">Archiviati</option>

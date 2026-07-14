@@ -328,3 +328,51 @@ html[data-theme="light"] .spin { border-color: var(--paper-edge); border-top-col
 /* Il pizzico resta possibile dove serve davvero: le anteprime dei documenti
    e le foto. Toglierlo li sarebbe un dispetto. */
 .prev, .prev-img, .cov img, .bcard .cov img, #editCanvas { touch-action: auto; }
+
+/* ---------- barra dei filtri (ricerca e tendine) ----------
+   Era copiata dentro tre pagine, e la quarta se n'e dimenticata: i campi
+   di documenti.html erano quelli grezzi del sistema, bianchi e squadrati.
+   Ora sta qui una volta sola, e vale ovunque.
+
+   Questi campi stanno SUL FONDO della pagina, non dentro una card, quindi
+   il testo usa --on-bg: chiaro sul verde, scuro sul beige. */
+.bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+
+.fsel,
+.search input {
+  border-radius: 12px;
+  border: 1px solid var(--forest-line);
+  /* background-color, non background: la forma abbreviata azzererebbe la
+     freccetta disegnata piu sotto. */
+  background-color: color-mix(in srgb, var(--forest-deep) 55%, transparent);
+  color: var(--on-bg);
+  font: inherit;
+  /* 16px: sotto questa misura iPhone ingrandisce la pagina da solo
+     quando tocchi il campo. */
+  font-size: 16px;
+}
+html[data-theme="light"] .fsel,
+html[data-theme="light"] .search input {
+  background-color: var(--paper);
+  border-color: var(--paper-edge);
+}
+.fsel { padding: 11px 34px 11px 13px; font-weight: 600; }
+.fsel:focus,
+.search input:focus { outline: none; border-color: var(--brass); }
+
+.search { position: relative; flex: 1; min-width: 170px; }
+.search input { width: 100%; padding: 11px 14px 11px 38px; }
+.search input::placeholder { color: var(--on-bg); opacity: .5; }
+.search .mag {
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--brass); pointer-events: none;
+}
+
+/* La freccetta delle tendine: quella di sistema e squadrata e ignora il
+   tema. La disegno io, cosi le tendine sembrano le nostre. */
+.fsel {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C49A4A' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
