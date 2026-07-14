@@ -170,8 +170,12 @@ html[data-theme="light"] .btn-ghost { border-color: var(--paper-edge); color: va
 .status {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 14px; border-radius: 99px; font-size: 12.5px;
-  border: 1px solid var(--forest-line); color: var(--paper-soft);
+  border: 1px solid var(--forest-line); color: var(--on-bg);
   background: color-mix(in srgb, var(--forest-deep) 50%, transparent);
+  /* Lo stacco dal contenuto sotto. Prima non c'era: le spese lo
+     risolvevano con un <div> apposta scritto a mano, e tutte le altre
+     pagine restavano incollate. Una regola sola, e vale ovunque. */
+  margin-bottom: 18px;
 }
 html[data-theme="light"] .status { border-color: var(--paper-edge); color: var(--ink-soft); }
 .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brass); flex-shrink: 0; }
