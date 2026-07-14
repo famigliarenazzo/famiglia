@@ -1,7 +1,7 @@
 /* Service worker del portale di famiglia.
    Mette in cache solo l'involucro dell'app (HTML, CSS, icone).
    I dati passano sempre dalla rete: mai in cache. */
-var VERSION = "famiglia-v15";
+var VERSION = "famiglia-v16";
 var SHELL = [
   "./",
   "./index.html",
@@ -50,6 +50,43 @@ self.addEventListener("fetch", function (e) {
      serve sempre il dato aggiornato e la sessione valida. */
   if (url.hostname.indexOf("supabase.co") >= 0) return;
 
+  /* --------------------------------------------------------------
+     I file dell'app: PRIMA LA RETE, la cache solo come riserva.
+
+     Prima era il contrario: se il file era in cache veniva servito
+     quello e la rete non veniva mai interpellata. Risultato: dopo un
+     aggiornamento il telefono continuava a mostrare la versione
+     vecchia, e mescolando HTML nuovo e CSS vecchio la pagina si
+     rompeva in modi difficili da capire (icone giganti, stili spariti).
+
+     Adesso, se c'e rete, si prende sempre la versione buona; se non
+     c'e, si usa la copia salvata e l'app funziona lo stesso offline.
+     Costa qualche millisecondo, e vale la pena.
+     -------------------------------------------------------------- */
+  var isApp = url.origin === location.origin
+    && /\.(html|css|js|webmanifest)$|\/$/.test(url.pathname);
+
+  if (isApp) {
+    e.respondWith(
+      fetch(e.request).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(VERSION).then(function (c) { c.put(e.request, copy); });
+        }
+        return res;
+      }).catch(function () {
+        /* niente rete: uso la copia salvata */
+        return caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
+          if (hit) return hit;
+          if (e.request.mode === "navigate") return caches.match("./index.html");
+        });
+      })
+    );
+    return;
+  }
+
+  /* Tutto il resto (icone, caratteri, librerie esterne) non cambia mai:
+     li la cache va benissimo e li rende istantanei. */
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       if (hit) return hit;

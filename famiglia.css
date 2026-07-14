@@ -376,3 +376,17 @@ html[data-theme="light"] .search input {
   background-repeat: no-repeat;
   background-position: right 12px center;
 }
+
+/* ---------- rete di sicurezza per le icone ----------
+   Un SVG senza dimensioni si espande a tutta la pagina. E successo: una
+   lente d'ingrandimento alta uno schermo, perche il CSS che le dava la
+   misura non era ancora arrivato al browser.
+   Questa e la cintura di sicurezza: nessuna icona puo diventare piu grande
+   del testo che la accompagna, nemmeno se la sua regola manca. */
+/* Solo le icone dentro pulsanti e link: quelle hanno sempre una misura
+   sensata legata al testo. NON tocco gli SVG posizionati (come l'overlay
+   dell'editor dello scanner), che devono riempire il loro contenitore:
+   una toppa che rompe un'altra cosa non e una toppa. */
+button > svg:not([width]),
+a > svg:not([width]),
+label > svg:not([width]) { width: 1.15em; height: 1.15em; flex-shrink: 0; }
