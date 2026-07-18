@@ -2,7 +2,7 @@
    I NOSTRI VIAGGI
    Un viaggio e' una riga sola nella tabella trips: le colonne in chiaro
    servono all'elenco, tutto il resto (giorni, luoghi, spostamenti,
-   spese, documenti, checklist) sta nel campo `dati`, in jsonb.
+   spese, documenti, liste) sta nel campo `dati`, in jsonb.
    ===================================================================== */
 
 /* ---------------- il registro delle icone ---------------- */
@@ -88,15 +88,32 @@ var mappa = null, strato = null, cacheRotte = {}, pickMode = null;
    del programma non deve mai chiedersi se un campo esiste. */
 function vuoto(d) {
   d = d || {};
-  ["giorni", "luoghi", "spostamenti", "spese", "documenti", "checklist"].forEach(function (k) {
+  ["giorni", "luoghi", "spostamenti", "spese", "documenti", "liste"].forEach(function (k) {
     if (!Array.isArray(d[k])) d[k] = [];
   });
+  /* La valigia era un elenco piatto di voci. Ora sono liste con un nome,
+     quindi le vecchie voci finiscono in una lista chiamata "Valigia".
+     Nessuno perde niente, e la conversione avviene una volta sola. */
+  if (Array.isArray(d.checklist) && d.checklist.length) {
+    d.liste.push({
+      id: uid(), nome: "Valigia", modelloId: null,
+      voci: d.checklist.map(function (c) {
+        return { id: c.id || uid(), testo: c.testo, fatto: !!c.fatto };
+      })
+    });
+    delete d.checklist;
+  }
   return d;
 }
+/* I viaggiatori di casa: precompilati sui nuovi viaggi, ma solo come
+   punto di partenza. Si tolgono con un tocco, e se ne aggiungono
+   quanti se ne vuole: le bambine, i nonni, gli amici. */
+var VIAGGIATORI_CASA = ["Stefano", "Ilaria"];
+
 function viaggiatori(t) {
   var v = t.viaggiatori;
   if (typeof v === "string") { try { v = JSON.parse(v); } catch (e) { v = null; } }
-  return Array.isArray(v) && v.length ? v : ["Io", "Lei"];
+  return Array.isArray(v) && v.length ? v : VIAGGIATORI_CASA.slice();
 }
 function tripKm(t) { return vuoto(t.dati).spostamenti.reduce(function (s, x) { return s + num(x.km); }, 0); }
 function tripSpeso(t) { return vuoto(t.dati).spese.reduce(function (s, x) { return s + num(x.importo); }, 0); }
@@ -123,11 +140,24 @@ function salva(subito) {
 }
 
 /* ---------------- avvio ---------------- */
+/* ---------------- i modelli delle liste ricorrenti ----------------
+   Non stanno dentro un viaggio: sono di casa, e vivono in settings,
+   la stessa tabella che tiene i proprietari dei libri e le percentuali
+   di rivendita. Un viaggio nuovo se ne porta via una copia. */
+var modelli = [];
+
+function salvaModelli() {
+  return guard(sb.from("settings").upsert({ key: "liste_viaggio", value: modelli }), "modelli liste");
+}
+
 requireAuth().then(function () {
   setStatus("", "Carico…");
   return guard(sb.from("trips").select("*").order("inizio", { ascending: false }), "elenco viaggi");
 }).then(function (rows) {
   trips = (rows || []).map(function (t) { t.dati = vuoto(t.dati); return t; });
+  return sb.from("settings").select("value").eq("key", "liste_viaggio").maybeSingle();
+}).then(function (r) {
+  modelli = (r && r.data && Array.isArray(r.data.value)) ? r.data.value : [];
   home();
 }).catch(function () { });
 
@@ -189,34 +219,73 @@ function disegnaLista(q) {
 }
 
 /* ---------------- nuovo / modifica viaggio ---------------- */
-var nvEdit = null;
+var nvEdit = null, nvViagg = [];
 function apriNuovo(t) {
   nvEdit = t;
   $("nvTitle").textContent = t ? "Modifica il viaggio" : "Nuovo viaggio";
-  var v = t ? viaggiatori(t) : ["Io", ""];
+  nvViagg = t ? viaggiatori(t).slice() : VIAGGIATORI_CASA.slice();
   $("nvT").value = t ? t.titolo : "";
   $("nvD").value = t ? (t.destinazione || "") : "";
   $("nvI").value = t ? (t.inizio || "") : oggi();
   $("nvF").value = t ? (t.fine || "") : oggi();
   $("nvB").value = t && t.budget ? t.budget : "";
   $("nvS").value = t ? t.stato : "in programma";
-  $("nvV1").value = v[0] || "Io";
-  $("nvV2").value = v[1] || "";
+  $("nvVnew").value = "";
+  disegnaViagg();
   $("nvDel").hidden = !t;
   $("nvModal").hidden = false;
 }
+function disegnaViagg() {
+  if (!nvViagg.length) {
+    $("nvVlist").innerHTML = '<div class="none">Nessuno, per ora. Aggiungi almeno una persona.</div>';
+    return;
+  }
+  $("nvVlist").innerHTML = nvViagg.map(function (n, i) {
+    return '<button data-v="' + i + '">' + esc(n) + '<span class="x">✕</span></button>';
+  }).join("");
+  Array.prototype.forEach.call($("nvVlist").querySelectorAll("[data-v]"), function (b) {
+    b.addEventListener("click", function () {
+      nvViagg.splice(+b.getAttribute("data-v"), 1);
+      disegnaViagg();
+    });
+  });
+}
+function aggiungiViagg() {
+  var n = $("nvVnew").value.trim();
+  if (!n) return;
+  /* Due persone con lo stesso nome nello stesso viaggio non hanno senso
+     e romperebbero il conto delle spese per persona. */
+  if (nvViagg.some(function (x) { return x.toLowerCase() === n.toLowerCase(); })) {
+    toast("C'e' gia'"); $("nvVnew").value = ""; return;
+  }
+  nvViagg.push(n);
+  $("nvVnew").value = "";
+  disegnaViagg();
+}
+$("nvVadd").addEventListener("click", aggiungiViagg);
+$("nvVnew").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); aggiungiViagg(); } });
 $("nvClose").addEventListener("click", function () { $("nvModal").hidden = true; });
 $("nvCancel").addEventListener("click", function () { $("nvModal").hidden = true; });
 $("nvSave").addEventListener("click", function () {
   var t = $("nvT").value.trim();
   if (!t) { toast("Il titolo serve"); return; }
+  if (!nvViagg.length) { toast("Serve almeno una persona"); return; }
   var rec = {
     titolo: t, destinazione: $("nvD").value.trim() || null,
     inizio: $("nvI").value || null, fine: $("nvF").value || null,
     budget: num($("nvB").value) || null, stato: $("nvS").value,
-    viaggiatori: [$("nvV1").value.trim() || "Io", $("nvV2").value.trim() || "Lei"]
+    viaggiatori: nvViagg.slice()
   };
   if (nvEdit) {
+    /* Chi e' stato tolto dal viaggio puo' avere spese a suo nome: quelle
+       restano, ma vanno riassegnate, altrimenti sparirebbero dai conti
+       senza che nessuno se ne accorga. */
+    var orfane = vuoto(nvEdit.dati).spese.filter(function (s) {
+      return s.pagatoDa && nvViagg.indexOf(s.pagatoDa) < 0;
+    });
+    if (orfane.length && !confirm(
+      orfane.length + " spes" + (orfane.length === 1 ? "a e' intestata" : "e sono intestate")
+      + " a qualcuno che stai togliendo. Restano nel totale, ma senza un nome. Procedo?")) return;
     Object.assign(nvEdit, rec);
     guard(sb.from("trips").update(rec).eq("id", nvEdit.id), "modifica viaggio").then(function () {
       $("nvModal").hidden = true; toast("Salvato");
@@ -224,9 +293,20 @@ $("nvSave").addEventListener("click", function () {
     });
   } else {
     rec.dati = vuoto({});
+    /* Le liste ricorrenti arrivano nel viaggio nuovo gia' pronte da
+       spuntare: e' il punto di averle. Sono copie, quindi spuntare una
+       voce qui non tocca il modello ne' gli altri viaggi. */
+    rec.dati.liste = modelli.map(function (m) {
+      return {
+        id: uid(), nome: m.nome, modelloId: m.id,
+        voci: (m.voci || []).map(function (v) { return { id: uid(), testo: v, fatto: false }; })
+      };
+    });
     guard(sb.from("trips").insert(rec).select().single(), "nuovo viaggio").then(function (r) {
       r.dati = vuoto(r.dati); trips.unshift(r);
-      $("nvModal").hidden = true; apri(r.id);
+      $("nvModal").hidden = true;
+      if (modelli.length) toast(modelli.length === 1 ? "Lista ricorrente copiata" : modelli.length + " liste ricorrenti copiate");
+      apri(r.id);
     });
   }
 });
@@ -261,7 +341,7 @@ function vista() {
 
   var TABS = [
     ["panoramica", "Panoramica"], ["mappa", "Mappa"], ["itinerario", "Itinerario"],
-    ["diario", "Diario"], ["spese", "Spese"], ["documenti", "Documenti"], ["valigia", "Valigia"]
+    ["diario", "Diario"], ["spese", "Spese"], ["documenti", "Documenti"], ["valigia", "Liste"]
   ];
   var h = '<div class="tabs">' + TABS.map(function (t) {
     return '<button data-t="' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>';
@@ -279,7 +359,6 @@ function vista() {
 function vPanoramica() {
   var d = trip.dati, speso = tripSpeso(trip), bud = num(trip.budget);
   var visti = d.luoghi.filter(function (l) { return l.visto; }).length;
-  var fatti = d.checklist.filter(function (c) { return c.fatto; }).length;
 
   var h = '<div class="panel"><div class="stats">'
     + '<div><b>' + tripKm(trip).toLocaleString("it-IT") + '</b><span>km</span></div>'
@@ -744,11 +823,19 @@ $("gnDel").addEventListener("click", function () {
 function vSpese() {
   var d = trip.dati, v = viaggiatori(trip);
   var tot = tripSpeso(trip);
-  /* Chi ha anticipato quanto, e quanto deve dare l'altro perche' i conti
-     tornino. La divisione e' a meta': e' un viaggio, non un condominio. */
-  var perUno = {}; v.forEach(function (n) { perUno[n] = 0; });
-  d.spese.forEach(function (s) { if (perUno[s.pagatoDa] != null) perUno[s.pagatoDa] += num(s.importo); });
-  var quota = tot / (v.length || 1);
+
+  /* Chi ha anticipato quanto. Non c'e' nessun conto da pareggiare: e'
+     tutto in famiglia, i soldi escono dallo stesso cassetto. Serve solo
+     sapere da quale carta sono usciti, per ritrovarli sull'estratto
+     conto quando si controllano le spese di casa. */
+  var perUno = {};
+  v.forEach(function (n) { perUno[n] = 0; });
+  d.spese.forEach(function (s) {
+    if (perUno[s.pagatoDa] == null) perUno[s.pagatoDa] = 0;
+    perUno[s.pagatoDa] += num(s.importo);
+  });
+  var nomi = Object.keys(perUno).filter(function (n) { return perUno[n] > 0; })
+    .sort(function (a, b) { return perUno[b] - perUno[a]; });
 
   var perCat = {};
   d.spese.forEach(function (s) { perCat[s.categoria || "Altro"] = (perCat[s.categoria || "Altro"] || 0) + num(s.importo); });
@@ -757,15 +844,15 @@ function vSpese() {
   var h = '<div class="bar"><button class="btn" id="addSs">+ Spesa</button>'
     + '<span class="count" style="margin-left:auto">Totale <b>' + fmtEur(tot) + '</b></span></div>';
 
-  if (v.length === 2 && tot) {
-    var a = v[0], b = v[1], diff = perUno[a] - quota;
-    h += '<div class="panel"><div class="bud">'
-      + '<div class="lbl"><span>' + esc(a) + ' ha anticipato</span><b>' + fmtEur(perUno[a]) + '</b></div>'
-      + '<div class="lbl" style="margin-top:5px"><span>' + esc(b) + ' ha anticipato</span><b>' + fmtEur(perUno[b]) + '</b></div>'
-      + '<div class="lbl" style="margin-top:11px;padding-top:11px;border-top:1px solid var(--paper-edge)">'
-      + '<span>Per pareggiare</span><b style="color:var(--rust)">'
-      + (Math.abs(diff) < 0.01 ? "siete pari" : esc(diff > 0 ? b : a) + " deve " + fmtEur(Math.abs(diff)) + " a " + esc(diff > 0 ? a : b))
-      + '</b></div></div></div>';
+  if (nomi.length) {
+    h += '<div class="panel"><h3>Chi ha pagato</h3>' + nomi.map(function (n) {
+      var pc = Math.round(perUno[n] / tot * 100);
+      return '<div class="row" style="cursor:default">'
+        + '<div class="txt"><div class="t">' + esc(n) + '</div>'
+        + '<div class="s"><span style="display:inline-block;height:5px;border-radius:3px;background:var(--rust);width:'
+        + Math.max(3, pc * 1.6) + 'px;vertical-align:middle;margin-right:7px"></span>' + pc + '%</div></div>'
+        + '<div class="val">' + fmtEur(perUno[n]) + '</div></div>';
+    }).join("") + '</div>';
   }
 
   if (cats.length) {
@@ -943,46 +1030,268 @@ $("dcDel").addEventListener("click", function () {
   }).then(function () { $("dcModal").hidden = true; toast("Eliminato"); vista(); });
 });
 
-/* ---------------- valigia ---------------- */
+/* ---------------- valigia ----------------
+   Non piu' un elenco unico ma piu' liste, ognuna col suo nome. Quelle
+   segnate come ricorrenti diventano modelli di casa e si ritrovano in
+   ogni viaggio nuovo, gia' pronte da spuntare.
+
+   Le liste dentro un viaggio sono COPIE del modello, non collegamenti:
+   spuntare "passaporti" per il Giappone non deve spuntarlo anche per la
+   Puglia, e togliere una voce qui non deve toglierla a tutti. Quando
+   invece vuoi che una modifica valga per sempre, c'e' un pulsante che
+   riporta le voci nel modello, ed e' una scelta esplicita. */
 function vValigia() {
   var d = trip.dati;
-  var fatti = d.checklist.filter(function (c) { return c.fatto; }).length;
-  var h = '<div class="bar" style="gap:8px">'
-    + '<div class="search" style="flex:1"><input type="text" id="ckNew" placeholder="Cosa non devo dimenticare…" style="padding-left:14px"></div>'
-    + '<button class="btn" id="ckAdd">Aggiungi</button></div>';
-  if (d.checklist.length) {
-    h += '<p style="color:var(--on-bg-soft);font-size:13.5px;margin:-6px 0 14px"><b style="color:var(--brass-text)">'
-      + fatti + ' di ' + d.checklist.length + '</b> fatti.</p>';
-    h += '<div class="panel">' + d.checklist.map(function (c) {
-      return '<div class="ck-row' + (c.fatto ? ' done' : '') + '">'
-        + '<div class="ck-box' + (c.fatto ? ' on' : '') + '" data-ck="' + c.id + '">' + (c.fatto ? ico("check", 13, "#fff") : "") + '</div>'
-        + '<div class="tx">' + esc(c.testo) + '</div>'
-        + '<button class="del" data-ckd="' + c.id + '">✕</button></div>';
-    }).join("") + '</div>';
-  } else {
-    h += '<div class="empty"><div class="emo">✅</div><h3>Niente in lista</h3>'
-      + '<p>Passaporti, adattatori, assicurazione, il caricabatterie che dimentichi sempre.</p></div>';
+  var tot = 0, fatti = 0;
+  d.liste.forEach(function (l) {
+    tot += l.voci.length;
+    fatti += l.voci.filter(function (v) { return v.fatto; }).length;
+  });
+
+  var h = '<div class="bar">'
+    + '<button class="btn" id="lsAdd">+ Nuova lista</button>'
+    + '<button class="btn-ghost" id="mdOpen">Le liste ricorrenti'
+    + (modelli.length ? ' · ' + modelli.length : '') + '</button>'
+    + (tot ? '<span class="count" style="margin-left:auto"><b>' + fatti + ' di ' + tot + '</b> fatti</span>' : '')
+    + '</div>';
+
+  if (!d.liste.length) {
+    h += '<div class="empty"><div class="emo">🧳</div><h3>Nessuna lista</h3>'
+      + '<p>Una lista per la valigia, una per i documenti, una per la farmacia. '
+      + 'Segna come <b>ricorrenti</b> quelle che rifaresti ogni volta: le ritrovi gia\' pronte nel prossimo viaggio.</p></div>';
   }
+
+  d.liste.forEach(function (l) {
+    var f = l.voci.filter(function (v) { return v.fatto; }).length;
+    h += '<div class="panel">'
+      + '<div class="lista-h">'
+      + '<b>' + esc(l.nome) + '</b>'
+      + (l.modelloId ? '<span class="ric">ricorrente</span>' : '')
+      + '<span class="prog-l">' + f + '/' + l.voci.length + '</span>'
+      + '<button class="az" data-lm="' + l.id + '">Modifica</button>'
+      + '</div>'
+      + (l.voci.length ? l.voci.map(function (v) {
+          return '<div class="ck-row' + (v.fatto ? ' done' : '') + '">'
+            + '<div class="ck-box' + (v.fatto ? ' on' : '') + '" data-ck="' + l.id + '|' + v.id + '">'
+            + (v.fatto ? ico("check", 13, "#fff") : "") + '</div>'
+            + '<div class="tx">' + esc(v.testo) + '</div>'
+            + '<button class="del" data-ckd="' + l.id + '|' + v.id + '">✕</button></div>';
+        }).join("") : '<div style="padding:13px 17px;font-size:13.5px;color:var(--ink-soft)">Lista vuota.</div>')
+      + '<div class="ck-row" style="background:var(--paper)">'
+      + '<div style="width:22px"></div>'
+      + '<input type="text" class="add-v" data-add="' + l.id + '" placeholder="Aggiungi una voce…" '
+      + 'style="flex:1;border:none;background:transparent;font-size:14.5px;color:var(--ink);outline:none">'
+      + '</div>'
+      + '</div>';
+  });
+
   $("corpo").innerHTML = h;
-  var aggiungi = function () {
-    var t = $("ckNew").value.trim();
-    if (!t) return;
-    d.checklist.push({ id: uid(), testo: t, fatto: false });
-    salva(true).then(vista);
-  };
-  $("ckAdd").addEventListener("click", aggiungi);
-  $("ckNew").addEventListener("keydown", function (e) { if (e.key === "Enter") aggiungi(); });
+  $("lsAdd").addEventListener("click", function () { apriLista(null); });
+  $("mdOpen").addEventListener("click", apriModelli);
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-lm]"), function (el) {
+    el.addEventListener("click", function () {
+      apriLista(d.liste.filter(function (x) { return x.id === el.getAttribute("data-lm"); })[0]);
+    });
+  });
+  /* Spuntare e togliere sono le due cose che si fanno cento volte:
+     ridisegnare tutta la pagina a ogni tocco farebbe perdere la
+     posizione dello scorrimento. Aggiorno solo quello che cambia. */
   Array.prototype.forEach.call(document.querySelectorAll("[data-ck]"), function (el) {
     el.addEventListener("click", function () {
-      var c = d.checklist.filter(function (x) { return x.id === el.getAttribute("data-ck"); })[0];
-      c.fatto = !c.fatto;
-      salva(true).then(vista);
+      var p = el.getAttribute("data-ck").split("|");
+      var l = d.liste.filter(function (x) { return x.id === p[0]; })[0];
+      var v = l.voci.filter(function (x) { return x.id === p[1]; })[0];
+      v.fatto = !v.fatto;
+      el.className = "ck-box" + (v.fatto ? " on" : "");
+      el.innerHTML = v.fatto ? ico("check", 13, "#fff") : "";
+      el.parentNode.className = "ck-row" + (v.fatto ? " done" : "");
+      aggiornaConteggi();
+      salva();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-ckd]"), function (el) {
     el.addEventListener("click", function () {
-      d.checklist = d.checklist.filter(function (x) { return x.id !== el.getAttribute("data-ckd"); });
+      var p = el.getAttribute("data-ckd").split("|");
+      var l = d.liste.filter(function (x) { return x.id === p[0]; })[0];
+      l.voci = l.voci.filter(function (x) { return x.id !== p[1]; });
       salva(true).then(vista);
     });
   });
+  /* Aggiungere una voce senza aprire finestre: scrivi e premi invio,
+     il campo resta li' pronto per la voce successiva. */
+  Array.prototype.forEach.call(document.querySelectorAll("[data-add]"), function (inp) {
+    inp.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      var t = inp.value.trim();
+      if (!t) return;
+      var l = d.liste.filter(function (x) { return x.id === inp.getAttribute("data-add"); })[0];
+      l.voci.push({ id: uid(), testo: t, fatto: false });
+      inp.value = "";
+      salva(true).then(function () {
+        vista();
+        var next = document.querySelector('[data-add="' + l.id + '"]');
+        if (next) next.focus();
+      });
+    });
+  });
 }
+
+/* Ricalcola le due cifre in cima senza ridisegnare le liste. */
+function aggiornaConteggi() {
+  var d = trip.dati, tot = 0, fatti = 0;
+  d.liste.forEach(function (l) {
+    tot += l.voci.length;
+    fatti += l.voci.filter(function (v) { return v.fatto; }).length;
+  });
+  var c = document.querySelector(".bar .count");
+  if (c) c.innerHTML = "<b>" + fatti + " di " + tot + "</b> fatti";
+  d.liste.forEach(function (l) {
+    var f = l.voci.filter(function (v) { return v.fatto; }).length;
+    var b = document.querySelector('[data-lm="' + l.id + '"]');
+    if (b && b.previousElementSibling) b.previousElementSibling.textContent = f + "/" + l.voci.length;
+  });
+}
+
+/* ---------------- una lista ---------------- */
+var lsEdit = null;
+function apriLista(l) {
+  lsEdit = l;
+  $("lsTitle").textContent = l ? "Modifica la lista" : "Nuova lista";
+  $("lsN").value = l ? l.nome : "";
+  $("lsR").checked = l ? !!l.modelloId : false;
+  $("lsV").value = l ? l.voci.map(function (v) { return v.testo; }).join("\n") : "";
+  $("lsDel").hidden = !l;
+  /* Il pulsante per riportare le voci nel modello ha senso solo se un
+     modello c'e', e solo se le voci sono davvero diverse: proporre di
+     aggiornare qualcosa di gia' uguale e' rumore. */
+  var m = l && l.modelloId ? modelli.filter(function (x) { return x.id === l.modelloId; })[0] : null;
+  $("lsSync").hidden = !m || JSON.stringify(m.voci || []) === JSON.stringify(l.voci.map(function (v) { return v.testo; }));
+  $("lsModal").hidden = false;
+  setTimeout(function () { $("lsN").focus(); }, 60);
+}
+function vociDaTesto(t) {
+  return t.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+}
+$("lsClose").addEventListener("click", function () { $("lsModal").hidden = true; });
+$("lsCancel").addEventListener("click", function () { $("lsModal").hidden = true; });
+$("lsPush").addEventListener("click", function () {
+  if (!lsEdit || !lsEdit.modelloId) return;
+  var m = modelli.filter(function (x) { return x.id === lsEdit.modelloId; })[0];
+  if (!m) return;
+  m.voci = vociDaTesto($("lsV").value);
+  salvaModelli().then(function () { $("lsSync").hidden = true; toast("Modello aggiornato"); });
+});
+$("lsSave").addEventListener("click", function () {
+  var nome = $("lsN").value.trim();
+  if (!nome) { toast("Il nome serve"); return; }
+  var testi = vociDaTesto($("lsV").value);
+  var d = trip.dati;
+
+  /* Le voci gia' spuntate restano spuntate: riscrivere il testo di una
+     lista non deve azzerare quello che hai gia' messo in valigia. */
+  var vecchie = {};
+  if (lsEdit) lsEdit.voci.forEach(function (v) { vecchie[v.testo] = v.fatto; });
+  var voci = testi.map(function (t) { return { id: uid(), testo: t, fatto: !!vecchie[t] }; });
+
+  var ric = $("lsR").checked;
+  var p = Promise.resolve();
+
+  if (lsEdit) {
+    lsEdit.nome = nome;
+    lsEdit.voci = voci;
+    if (ric && !lsEdit.modelloId) {
+      /* Diventa ricorrente adesso: nasce il modello di casa. */
+      var m = { id: uid(), nome: nome, voci: testi };
+      modelli.push(m);
+      lsEdit.modelloId = m.id;
+      p = salvaModelli();
+    } else if (!ric && lsEdit.modelloId) {
+      /* Smette di esserlo: il modello sparisce dai viaggi futuri, ma la
+         lista resta dov'e', in questo viaggio. */
+      var id = lsEdit.modelloId;
+      modelli = modelli.filter(function (x) { return x.id !== id; });
+      lsEdit.modelloId = null;
+      p = salvaModelli();
+    } else if (ric && lsEdit.modelloId) {
+      var mm = modelli.filter(function (x) { return x.id === lsEdit.modelloId; })[0];
+      if (mm) { mm.nome = nome; p = salvaModelli(); }
+    }
+  } else {
+    var nuova = { id: uid(), nome: nome, modelloId: null, voci: voci };
+    if (ric) {
+      var m2 = { id: uid(), nome: nome, voci: testi };
+      modelli.push(m2);
+      nuova.modelloId = m2.id;
+      p = salvaModelli();
+    }
+    d.liste.push(nuova);
+  }
+
+  p.then(function () { return salva(true); })
+   .then(function () { $("lsModal").hidden = true; toast("Salvata"); vista(); });
+});
+$("lsDel").addEventListener("click", function () {
+  if (!lsEdit) return;
+  var id = lsEdit.id;
+  if (lsEdit.modelloId && !confirm("Questa lista e' ricorrente. Eliminandola sparisce da questo viaggio, ma il modello resta e la ritroverai nei prossimi. Procedo?")) return;
+  trip.dati.liste = trip.dati.liste.filter(function (x) { return x.id !== id; });
+  salva(true).then(function () { $("lsModal").hidden = true; toast("Eliminata"); vista(); });
+});
+
+/* ---------------- i modelli ricorrenti ---------------- */
+function apriModelli() {
+  disegnaModelli();
+  $("mdModal").hidden = false;
+}
+function disegnaModelli() {
+  if (!modelli.length) {
+    $("mdBody").innerHTML = '<div style="text-align:center;padding:26px 10px">'
+      + '<div style="font-size:34px;opacity:.35;margin-bottom:10px">🔁</div>'
+      + '<p style="font-size:14px;line-height:1.6;color:var(--ink-soft)">'
+      + 'Nessuna lista ricorrente. Quando crei una lista, spunta <b>ricorrente</b>: '
+      + 'da quel momento la ritrovi in ogni viaggio nuovo senza doverla riscrivere.</p></div>';
+    return;
+  }
+  $("mdBody").innerHTML = '<p style="font-size:13.5px;line-height:1.6;color:var(--ink-soft);margin-bottom:14px">'
+    + 'Queste liste vengono copiate in ogni viaggio nuovo. '
+    + 'Toglierne una non tocca i viaggi gia\' fatti.</p>'
+    + modelli.map(function (m) {
+        var dentro = trip && trip.dati.liste.some(function (l) { return l.modelloId === m.id; });
+        return '<div class="row" style="cursor:default;padding-left:0;padding-right:0">'
+          + '<div class="txt"><div class="t">' + esc(m.nome) + '</div>'
+          + '<div class="s">' + (m.voci || []).length + ' voci'
+          + (dentro ? ' · gia\' in questo viaggio' : '') + '</div></div>'
+          + (dentro ? '' : '<button class="btn-ghost" data-mdu="' + m.id + '" style="padding:7px 11px;font-size:12.5px">Aggiungi qui</button>')
+          + '<button class="btn-ghost" data-mdd="' + m.id + '" style="padding:7px 11px;font-size:12.5px;color:var(--rust)">Togli</button>'
+          + '</div>';
+      }).join("");
+
+  Array.prototype.forEach.call($("mdBody").querySelectorAll("[data-mdu]"), function (b) {
+    b.addEventListener("click", function () {
+      var m = modelli.filter(function (x) { return x.id === b.getAttribute("data-mdu"); })[0];
+      trip.dati.liste.push({
+        id: uid(), nome: m.nome, modelloId: m.id,
+        voci: (m.voci || []).map(function (v) { return { id: uid(), testo: v, fatto: false }; })
+      });
+      salva(true).then(function () { disegnaModelli(); toast("Aggiunta al viaggio"); });
+    });
+  });
+  Array.prototype.forEach.call($("mdBody").querySelectorAll("[data-mdd]"), function (b) {
+    b.addEventListener("click", function () {
+      var id = b.getAttribute("data-mdd");
+      var m = modelli.filter(function (x) { return x.id === id; })[0];
+      if (!confirm("Togliere «" + m.nome + "» dalle ricorrenti? Le liste gia' copiate nei viaggi restano dove sono.")) return;
+      modelli = modelli.filter(function (x) { return x.id !== id; });
+      /* Le liste copiate perdono il legame ma non i contenuti: restano
+         liste normali, dentro i loro viaggi. */
+      trips.forEach(function (t) {
+        vuoto(t.dati).liste.forEach(function (l) { if (l.modelloId === id) l.modelloId = null; });
+      });
+      salvaModelli().then(function () { return salva(true); })
+        .then(function () { disegnaModelli(); toast("Tolta"); });
+    });
+  });
+}
+$("mdClose").addEventListener("click", function () { $("mdModal").hidden = true; vista(); });
+$("mdDone").addEventListener("click", function () { $("mdModal").hidden = true; vista(); });

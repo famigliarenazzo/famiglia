@@ -52,9 +52,14 @@
   .tabs button.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
 
   /* ---------- mappa ---------- */
+  /* Leaflet assegna ai suoi strati z-index fino a 1000, e i pannelli del
+     sito stanno a 60: senza questo, aprendo una finestra la mappa le
+     finiva sopra. Il contenitore apre un contesto di impilamento suo,
+     cosi i mille di Leaflet valgono solo dentro la mappa. */
   .mapbox {
     height: 340px; border-radius: var(--r); overflow: hidden; position: relative;
     border: 1px solid var(--paper-edge); box-shadow: 0 4px 20px var(--shadow); margin-bottom: 16px;
+    z-index: 0; isolation: isolate;
   }
   .mapbox .leaflet-container { height: 100%; background: #0d1a15; }
   .maphint {
@@ -143,6 +148,33 @@
   .leg .d s { text-decoration: none; color: var(--ink-soft); font-size: 12px; }
 
   /* ---------- picker categorie ---------- */
+  /* ---------- chi viaggia ---------- */
+  .viagg { display: flex; flex-wrap: wrap; gap: 7px; }
+  .viagg button {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+    padding: 7px 12px; border-radius: 99px; border: 1px solid var(--paper-edge);
+    background: var(--paper-soft); color: var(--ink); transition: .12s;
+  }
+  .viagg button:hover { border-color: var(--rust); color: var(--rust); }
+  .viagg button .x { opacity: .45; font-size: 14px; }
+  .viagg button:hover .x { opacity: 1; }
+  .viagg .none { font-size: 13px; color: var(--ink-soft); padding: 7px 0; }
+
+  /* ---------- liste della valigia ---------- */
+  .lista-h {
+    display: flex; align-items: center; gap: 10px; padding: 13px 17px;
+    border-bottom: 1px solid var(--paper-edge); background: var(--paper-soft);
+  }
+  .lista-h b { font-family: var(--disp); font-size: 14.5px; flex: 1; color: var(--ink); }
+  .lista-h .ric {
+    font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--brass) 32%, transparent); color: var(--brass-ink);
+    border-radius: 99px; padding: 3px 9px;
+  }
+  .lista-h .az { color: var(--ink-soft); font-size: 13px; padding: 3px 6px; border-radius: 7px; }
+  .lista-h .az:hover { color: var(--brass-ink); background: var(--paper); }
+  .prog-l { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+
   .catpick { display: flex; flex-wrap: wrap; gap: 6px; }
   .catpick button {
     display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
@@ -189,9 +221,13 @@
           <select id="nvS"><option value="in programma">In programma</option><option value="in corso">In corso</option><option value="concluso">Concluso</option></select>
         </div>
       </div>
-      <div class="f2">
-        <div class="fld"><label>Chi parte</label><input type="text" id="nvV1" placeholder="Io"></div>
-        <div class="fld"><label>Con chi</label><input type="text" id="nvV2" placeholder="Ilaria"></div>
+      <div class="fld">
+        <label>Chi viaggia <span class="opt">· tocca per togliere</span></label>
+        <div class="viagg" id="nvVlist"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="text" id="nvVnew" placeholder="Aggiungi qualcuno…" style="flex:1">
+          <button class="btn-ghost" id="nvVadd">Aggiungi</button>
+        </div>
       </div>
     </div>
     <div class="sheet-foot" style="justify-content:space-between">
@@ -352,6 +388,44 @@
         <button class="btn" id="gnSave">Salva</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- una lista della valigia -->
+<div class="modal" id="lsModal" hidden>
+  <div class="sheet" style="max-width:480px">
+    <div class="sheet-head"><h2 id="lsTitle">Nuova lista</h2><button class="x" id="lsClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Nome della lista *</label><input type="text" id="lsN" placeholder="Es. Farmacia da viaggio"></div>
+      <label class="chk"><input type="checkbox" id="lsR">
+        <span><b>Lista ricorrente.</b> La ritrovi in ogni viaggio nuovo, già pronta da spuntare.
+        Le voci restano quelle del modello: quello che aggiungi qui dentro vale solo per questo viaggio,
+        a meno che tu non aggiorni il modello dal pulsante in fondo.</span></label>
+      <div class="fld" style="margin-top:6px">
+        <label>Le voci <span class="opt">· una per riga</span></label>
+        <textarea id="lsV" rows="8" placeholder="Passaporti&#10;Caricabatterie&#10;Adattatore&#10;Assicurazione"></textarea>
+      </div>
+      <div id="lsSync" hidden style="font-size:12.5px;color:var(--ink-soft);background:var(--paper-soft);border-radius:9px;padding:9px 12px">
+        Questa lista viene da un modello ricorrente.
+        <span class="go" id="lsPush" style="display:inline-block;margin-top:5px;font-weight:700;color:var(--brass-ink);border-bottom:1px solid;cursor:pointer">Aggiorna il modello con queste voci</span>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="lsDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="lsCancel">Annulla</button>
+        <button class="btn" id="lsSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- i modelli ricorrenti -->
+<div class="modal" id="mdModal" hidden>
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-head"><h2>Le liste ricorrenti</h2><button class="x" id="mdClose">✕</button></div>
+    <div class="sheet-body" id="mdBody"></div>
+    <div class="sheet-foot"><button class="btn-ghost" id="mdDone">Chiudi</button></div>
   </div>
 </div>
 
