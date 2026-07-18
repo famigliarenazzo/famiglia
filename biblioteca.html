@@ -1205,9 +1205,14 @@ function loadAll() {
   return page().then(function () {
     books = all;
     return sb.from("settings").select("*").in("key", ["owners", "discounts"]);
-  }).then(function (rows) {
+  }).then(function (r) {
+    /* Supabase risponde con { data, error }, non con l'elenco: le righe
+       stanno dentro `data`. Se la lettura fallisce non e' il caso di
+       fermare tutto, perche' i libri sono gia' caricati: si prosegue
+       con le impostazioni di partenza. */
+    if (r.error) console.error("settings", r.error);
     var byKey = {};
-    (rows || []).forEach(function (x) { byKey[x.key] = x.value; });
+    (r.data || []).forEach(function (x) { byKey[x.key] = x.value; });
 
     /* Se le percentuali non sono ancora state definite si usano quelle
        di partenza, senza fermare niente: il calcolo funziona lo stesso
