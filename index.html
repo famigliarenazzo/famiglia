@@ -293,6 +293,20 @@
         </span>
       </a>
 
+      <a class="tool" href="viaggi.html">
+        <span class="stat" id="stTrip">—</span>
+        <div class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>
+          </svg>
+        </div>
+        <h2>I nostri viaggi</h2>
+        <p>Luoghi sulla mappa, tratte e chilometri, spese divise, biglietti e il diario della sera.</p>
+        <span class="go">Apri
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
     </div>
 
     <div class="install" id="install">
@@ -401,6 +415,26 @@ function loadStats() {
   sb.from("scans").select("id", { count: "exact", head: true }).then(function (r) {
     if (r.error) { $("stScan").textContent = "\u2014"; return; }
     $("stScan").textContent = r.count ? (r.count + (r.count === 1 ? " documento" : " documenti")) : "nessun documento";
+  });
+
+  /* viaggi: come per i documenti, il numero conta poco. Quello che
+     serve sapere dal portale e se si parte, e fra quanto. */
+  sb.from("trips").select("titolo,inizio,fine,stato").then(function (r) {
+    if (r.error) { $("stTrip").textContent = "\u2014"; return; }
+    var v = r.data || [];
+    if (!v.length) { $("stTrip").textContent = "nessun viaggio"; return; }
+    var corso = v.filter(function (x) { return x.stato === "in corso"; })[0];
+    if (corso) { $("stTrip").textContent = "in viaggio"; return; }
+    var oggi = new Date();
+    oggi = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+    var futuri = v.filter(function (x) { return x.inizio && new Date(x.inizio) >= oggi; })
+      .sort(function (a, b) { return a.inizio < b.inizio ? -1 : 1; });
+    if (futuri.length) {
+      var g = Math.round((new Date(futuri[0].inizio) - oggi) / 86400000);
+      $("stTrip").textContent = g === 0 ? "si parte oggi" : (g === 1 ? "manca 1 giorno" : "mancano " + g + " giorni");
+    } else {
+      $("stTrip").textContent = v.length + (v.length === 1 ? " viaggio" : " viaggi");
+    }
   });
 
   /* documenti di casa: qui non conto, AVVISO. Il senso della sezione e

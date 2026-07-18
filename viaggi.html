@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>I nostri viaggi · Famiglia Catenazzo Renò</title>
+<meta name="theme-color" content="#1C3329">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="famiglia.css">
+<style>
+  /* ---------- elenco dei viaggi ---------- */
+  .trips { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .tcard {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: var(--r); overflow: hidden; cursor: pointer; transition: .15s;
+    box-shadow: 0 4px 20px var(--shadow); display: flex; flex-direction: column;
+  }
+  .tcard:hover { transform: translateY(-4px); box-shadow: 0 14px 30px var(--shadow); border-color: var(--brass); }
+  .tcard .cov { height: 132px; background: var(--paper-soft); position: relative; overflow: hidden; }
+  .tcard .cov img { width: 100%; height: 100%; object-fit: cover; }
+  .tcard .cov .ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 34px; opacity: .28; }
+  .tcard .st {
+    position: absolute; top: 9px; left: 9px; font-size: 11px; font-weight: 700;
+    border-radius: 99px; padding: 4px 10px; background: rgba(12,22,17,.62);
+    backdrop-filter: blur(4px); color: #fff; letter-spacing: .02em;
+  }
+  .tcard .st.corso  { background: #7FB069; color: #14210f; }
+  .tcard .st.chiuso { background: rgba(12,22,17,.62); }
+  .tcard .nfo { padding: 13px 15px 15px; flex: 1; display: flex; flex-direction: column; }
+  .tcard h3 { font-family: var(--disp); font-weight: 600; font-size: 17.5px; line-height: 1.22; color: var(--ink); }
+  .tcard .dest { font-size: 13px; color: var(--rust); font-weight: 600; margin-top: 3px; }
+  .tcard .when { font-size: 12.5px; color: var(--ink-soft); margin-top: 7px; }
+  .tcard .num { display: flex; gap: 14px; margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--paper-edge); }
+  .tcard .num div { font-size: 11.5px; color: var(--ink-soft); }
+  .tcard .num b { display: block; font-family: var(--disp); font-size: 16px; color: var(--brass-ink); font-weight: 700; }
+
+  /* ---------- schede del viaggio ---------- */
+  .tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 18px; padding-bottom: 3px; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button {
+    padding: 9px 15px; border-radius: 11px; font-size: 13.5px; font-weight: 600;
+    border: 1px solid var(--forest-line); color: var(--on-bg-soft); white-space: nowrap; flex-shrink: 0; transition: .13s;
+  }
+  html[data-theme="light"] .tabs button { border-color: var(--paper-edge); color: var(--ink-soft); }
+  .tabs button.on { background: var(--brass); border-color: var(--brass); color: var(--on-brass); }
+
+  /* ---------- mappa ---------- */
+  .mapbox {
+    height: 340px; border-radius: var(--r); overflow: hidden; position: relative;
+    border: 1px solid var(--paper-edge); box-shadow: 0 4px 20px var(--shadow); margin-bottom: 16px;
+  }
+  .mapbox .leaflet-container { height: 100%; background: #0d1a15; }
+  .maphint {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 500;
+    background: var(--brass); color: var(--on-brass); font-size: 12.5px; font-weight: 700;
+    padding: 7px 14px; border-radius: 99px; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+  }
+  .pin {
+    width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid;
+    display: flex; align-items: center; justify-content: center; position: relative;
+    box-shadow: 0 3px 9px rgba(0,0,0,.45);
+  }
+  .pin .ck {
+    position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; border-radius: 50%;
+    background: #1F9E77; border: 2px solid #0d1a15; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- righe generiche ---------- */
+  .panel {
+    background: var(--paper); color: var(--ink); border: 1px solid var(--paper-edge);
+    border-radius: var(--r); box-shadow: 0 4px 20px var(--shadow); overflow: hidden; margin-bottom: 16px;
+  }
+  .panel > h3 {
+    font-family: var(--disp); font-weight: 600; font-size: 15px; padding: 14px 17px 0;
+    color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 17px;
+    border-bottom: 1px solid var(--paper-edge); cursor: pointer; transition: .12s;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--paper-soft); }
+  .row .ico {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .txt .t { font-family: var(--disp); font-weight: 600; font-size: 14.5px; color: var(--ink); line-height: 1.25; }
+  .row .txt .s { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .row .val { font-family: var(--disp); font-weight: 700; font-size: 15px; color: var(--brass-ink); white-space: nowrap; }
+  .row .val.neg { color: var(--rust); }
+
+  /* ---------- statistiche ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1px; background: var(--paper-edge); }
+  .stats div { background: var(--paper); padding: 14px 15px; }
+  .stats b { display: block; font-family: var(--disp); font-size: 21px; font-weight: 700; color: var(--brass-ink); line-height: 1.1; }
+  .stats span { font-size: 11.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+
+  /* ---------- barra del budget ---------- */
+  .bud { padding: 15px 17px; }
+  .bud .track { height: 9px; border-radius: 99px; background: var(--paper-soft); overflow: hidden; margin-top: 9px; }
+  .bud .fill { height: 100%; background: var(--brass); border-radius: 99px; transition: width .3s; }
+  .bud .fill.over { background: var(--rust); }
+  .bud .lbl { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); }
+  .bud .lbl b { color: var(--ink); font-weight: 700; }
+
+  /* ---------- checklist ---------- */
+  .ck-row { display: flex; align-items: center; gap: 11px; padding: 11px 17px; border-bottom: 1px solid var(--paper-edge); }
+  .ck-row:last-child { border-bottom: none; }
+  .ck-box {
+    width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--paper-edge);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: .12s;
+  }
+  .ck-box.on { background: #7FB069; border-color: #7FB069; }
+  .ck-row .tx { flex: 1; font-size: 14.5px; color: var(--ink); }
+  .ck-row.done .tx { text-decoration: line-through; color: var(--ink-soft); }
+  .ck-row .del { color: var(--ink-soft); opacity: .5; font-size: 15px; padding: 0 4px; }
+  .ck-row .del:hover { opacity: 1; color: var(--rust); }
+
+  /* ---------- il diario dei giorni ---------- */
+  .day { border-bottom: 1px solid var(--paper-edge); }
+  .day:last-child { border-bottom: none; }
+  .day-h { display: flex; align-items: center; gap: 12px; padding: 13px 17px; cursor: pointer; }
+  .day-h .n {
+    width: 32px; height: 32px; border-radius: 10px; background: var(--brass); color: var(--on-brass);
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .day-h .ti { flex: 1; min-width: 0; }
+  .day-h .ti b { font-family: var(--disp); font-size: 15px; color: var(--ink); display: block; }
+  .day-h .ti span { font-size: 12px; color: var(--ink-soft); }
+  .day-b { padding: 0 17px 15px 61px; }
+  .day-b .diario { font-size: 14px; line-height: 1.65; color: var(--ink-soft); white-space: pre-wrap; margin-bottom: 12px; }
+  .leg { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  .leg .ln { width: 30px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+  .leg .d { flex: 1; font-size: 13.5px; color: var(--ink); }
+  .leg .d s { text-decoration: none; color: var(--ink-soft); font-size: 12px; }
+
+  /* ---------- picker categorie ---------- */
+  .catpick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .catpick button {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+    padding: 7px 11px; border-radius: 99px; border: 1.5px solid; background: transparent; transition: .12s;
+  }
+
+  /* ---------- risultati ricerca luogo ---------- */
+  .geo-res { border: 1px solid var(--paper-edge); border-radius: 11px; overflow: hidden; margin-top: 8px; }
+  .geo-res button { display: block; width: 100%; text-align: left; padding: 10px 13px; font-size: 13.5px; border-bottom: 1px solid var(--paper-edge); color: var(--ink); }
+  .geo-res button:last-child { border-bottom: none; }
+  .geo-res button:hover { background: var(--paper-soft); }
+
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .f3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .f3 { grid-template-columns: 1fr 1fr; } .f3 > :last-child { grid-column: 1/-1; } }
+
+  .stars { display: flex; gap: 3px; }
+  .stars button { font-size: 19px; opacity: .28; transition: .12s; }
+  .stars button.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="top" id="top"></div>
+
+<div class="wrap" id="wrap">
+  <div class="loading"><div class="spin"></div><p style="margin-top:14px">Carico i viaggi…</p></div>
+</div>
+
+<!-- nuovo viaggio -->
+<div class="modal" id="nvModal" hidden>
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-head"><h2 id="nvTitle">Nuovo viaggio</h2><button class="x" id="nvClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Titolo *</label><input type="text" id="nvT" placeholder="Es. Giappone in fiore"></div>
+      <div class="fld"><label>Destinazione</label><input type="text" id="nvD" placeholder="Tokyo · Kyoto"></div>
+      <div class="f2">
+        <div class="fld"><label>Partenza</label><input type="date" id="nvI"></div>
+        <div class="fld"><label>Ritorno</label><input type="date" id="nvF"></div>
+      </div>
+      <div class="f2">
+        <div class="fld"><label>Budget <span class="opt">· €</span></label><input type="text" id="nvB" inputmode="decimal"></div>
+        <div class="fld"><label>Stato</label>
+          <select id="nvS"><option value="in programma">In programma</option><option value="in corso">In corso</option><option value="concluso">Concluso</option></select>
+        </div>
+      </div>
+      <div class="f2">
+        <div class="fld"><label>Chi parte</label><input type="text" id="nvV1" placeholder="Io"></div>
+        <div class="fld"><label>Con chi</label><input type="text" id="nvV2" placeholder="Ilaria"></div>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="nvDel" style="color:var(--rust)" hidden>Elimina il viaggio</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="nvCancel">Annulla</button>
+        <button class="btn" id="nvSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- luogo -->
+<div class="modal" id="lgModal" hidden>
+  <div class="sheet" style="max-width:560px">
+    <div class="sheet-head"><h2 id="lgTitle">Nuovo luogo</h2><button class="x" id="lgClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Nome *</label><input type="text" id="lgN" placeholder="Senso-ji"></div>
+      <div class="fld">
+        <label>Cerca l'indirizzo <span class="opt">· lo trova sulla mappa</span></label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="lgQ" placeholder="Senso-ji, Asakusa, Tokyo" style="flex:1">
+          <button class="btn-ghost" id="lgGeo">Cerca</button>
+        </div>
+        <div id="lgRes"></div>
+      </div>
+      <div class="fld"><label>Categoria</label><div class="catpick" id="lgCat"></div></div>
+      <div class="f2">
+        <div class="fld"><label>Latitudine</label><input type="text" id="lgLat" inputmode="decimal"></div>
+        <div class="fld"><label>Longitudine</label><input type="text" id="lgLng" inputmode="decimal"></div>
+      </div>
+      <div class="fld"><label>Indirizzo</label><input type="text" id="lgA"></div>
+      <div id="lgStay" hidden>
+        <div class="f2">
+          <div class="fld"><label>Check-in</label><input type="text" id="lgCi" placeholder="15:00"></div>
+          <div class="fld"><label>Check-out</label><input type="text" id="lgCo" placeholder="11:00"></div>
+        </div>
+        <div class="fld"><label>Informazioni utili <span class="opt">· wi-fi, colazione, bagagli</span></label><textarea id="lgEx" rows="2"></textarea></div>
+      </div>
+      <div class="f2" id="lgOP">
+        <div class="fld"><label>Orari</label><input type="text" id="lgO" placeholder="6:00–17:00"></div>
+        <div class="fld"><label>Prezzo</label><input type="text" id="lgP" placeholder="Gratis"></div>
+      </div>
+      <div class="fld"><label>Note</label><textarea id="lgNo" rows="2"></textarea></div>
+      <div class="f2">
+        <div class="fld"><label>Voto</label><div class="stars" id="lgV"></div></div>
+        <div class="fld"><label>Ci siamo stati</label>
+          <label class="chk" style="margin-top:8px"><input type="checkbox" id="lgSeen"><span>Sì, visitato</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="lgDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="lgCancel">Annulla</button>
+        <button class="btn" id="lgSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- spostamento -->
+<div class="modal" id="spModal" hidden>
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-head"><h2 id="spTitle">Spostamento</h2><button class="x" id="spClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="f2">
+        <div class="fld"><label>Da</label><select id="spDa"></select></div>
+        <div class="fld"><label>A</label><select id="spA"></select></div>
+      </div>
+      <div class="fld"><label>Come</label><div class="catpick" id="spMz"></div></div>
+      <div class="f3">
+        <div class="fld"><label>Giorno</label><select id="spG"></select></div>
+        <div class="fld"><label>Ora</label><input type="text" id="spO" placeholder="13:20"></div>
+        <div class="fld"><label>Km</label><input type="text" id="spKm" inputmode="numeric" placeholder="auto"></div>
+      </div>
+      <div class="fld"><label>Note</label><input type="text" id="spNo"></div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="spDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="spCancel">Annulla</button>
+        <button class="btn" id="spSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- spesa -->
+<div class="modal" id="ssModal" hidden>
+  <div class="sheet" style="max-width:480px">
+    <div class="sheet-head"><h2 id="ssTitle">Spesa</h2><button class="x" id="ssClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Descrizione *</label><input type="text" id="ssD" placeholder="Voli A/R x2"></div>
+      <div class="f2">
+        <div class="fld"><label>Importo <span class="opt">· €</span></label><input type="text" id="ssI" inputmode="decimal"></div>
+        <div class="fld"><label>Data</label><input type="date" id="ssDt"></div>
+      </div>
+      <div class="f2">
+        <div class="fld"><label>Categoria</label><select id="ssC"></select></div>
+        <div class="fld"><label>Chi ha pagato</label><select id="ssP"></select></div>
+      </div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="ssDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="ssCancel">Annulla</button>
+        <button class="btn" id="ssSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- documento di viaggio -->
+<div class="modal" id="dcModal" hidden>
+  <div class="sheet" style="max-width:520px">
+    <div class="sheet-head"><h2 id="dcTitle">Documento</h2><button class="x" id="dcClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="fld"><label>Titolo *</label><input type="text" id="dcT" placeholder="Milano MXP → Tokyo HND"></div>
+      <div class="f2">
+        <div class="fld"><label>Tipo</label><select id="dcTp"></select></div>
+        <div class="fld"><label>Data</label><input type="date" id="dcD"></div>
+      </div>
+      <div class="fld"><label>Codice <span class="opt">· PNR, prenotazione, biglietto</span></label><input type="text" id="dcC"></div>
+      <div class="fld"><label>Collegato al luogo</label><select id="dcL"></select></div>
+      <div class="fld">
+        <label>Il file <span class="opt">· PDF o foto, sta nell'archivio privato</span></label>
+        <input type="file" id="dcF" accept="application/pdf,image/*">
+        <div id="dcHas" style="font-size:12.5px;color:var(--ink-soft);margin-top:7px"></div>
+      </div>
+      <div class="fld"><label>Note</label><textarea id="dcN" rows="2"></textarea></div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="dcDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="dcCancel">Annulla</button>
+        <button class="btn" id="dcSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- giorno -->
+<div class="modal" id="gnModal" hidden>
+  <div class="sheet" style="max-width:560px">
+    <div class="sheet-head"><h2 id="gnTitle">Il giorno</h2><button class="x" id="gnClose">✕</button></div>
+    <div class="sheet-body">
+      <div class="f2">
+        <div class="fld"><label>Data</label><input type="date" id="gnD"></div>
+        <div class="fld"><label>Titolo</label><input type="text" id="gnT" placeholder="Atterraggio e prime luci"></div>
+      </div>
+      <div class="fld"><label>Il diario</label><textarea id="gnX" rows="7" placeholder="Com'è andata."></textarea></div>
+    </div>
+    <div class="sheet-foot" style="justify-content:space-between">
+      <button class="btn-ghost" id="gnDel" style="color:var(--rust)" hidden>Elimina</button>
+      <div style="display:flex;gap:9px;margin-left:auto">
+        <button class="btn-ghost" id="gnCancel">Annulla</button>
+        <button class="btn" id="gnSave">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="famiglia.js"></script>
+<script src="viaggi.js"></script>
+</body>
+</html>

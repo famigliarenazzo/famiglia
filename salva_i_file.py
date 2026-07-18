@@ -51,6 +51,7 @@ STATO = QUI / ".salva_i_file_stato.json"  # cosa ho gia scaricato
 
 BUCKET_PRIVATO = "privati"
 BUCKET_PUBBLICO = "pubblici"   # le copertine dei libri, se il bucket esiste
+BUCKET_FOTO = "foto"           # le foto dei viaggi
 
 
 # ----------------------------------------------------------------------
@@ -215,7 +216,7 @@ def main():
     totale_saltati = 0
     errori = []
 
-    for bucket in (BUCKET_PRIVATO, BUCKET_PUBBLICO):
+    for bucket in (BUCKET_PRIVATO, BUCKET_PUBBLICO, BUCKET_FOTO):
         try:
             files = arch.elenca(bucket)
         except requests.HTTPError as e:

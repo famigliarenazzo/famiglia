@@ -1,7 +1,7 @@
 /* Service worker del portale di famiglia.
    Mette in cache solo l'involucro dell'app (HTML, CSS, icone).
    I dati passano sempre dalla rete: mai in cache. */
-var VERSION = "famiglia-v21";
+var VERSION = "famiglia-v22";
 var SHELL = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ var SHELL = [
   "./spese.html",
   "./clinica.html",
   "./scanner.html",
+  "./viaggi.html",
   "./documenti.html",
   "./firma.html",
   "./salva.html",
@@ -20,6 +21,7 @@ var SHELL = [
   "./spese.js",
   "./bordi.js",
   "./firma.js",
+  "./viaggi.js",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-mask-512.png",
