@@ -10,6 +10,10 @@ solo da te e da tua moglie, sincronizzato fra i due telefoni.
 - **Lo scanner** · fotografa un documento e lo trasforma in un PDF diritto
 - **I documenti di casa** · contratti, garanzie, assicurazioni e le scadenze
   delle auto, con l'avviso prima che scadano
+- **I nostri viaggi** · i luoghi sulla mappa, le tratte, le spese divise,
+  i biglietti e il diario della sera
+- **L'allenamento** · le schede di casa, un esercizio alla volta, il peso
+  prima e dopo e il grafico di come va
 
 Tutto gratuito: il sito su hosting statico, i dati su Supabase (piano gratuito).
 
@@ -25,8 +29,12 @@ spese.html/.js        terzo strumento
 clinica.html          quarto strumento, la cartella clinica
 scanner.html          quinto strumento, lo scanner
 documenti.html        sesto strumento, i documenti di casa
+viaggi.html/.js       settimo strumento, il diario di viaggio
+allenamento.html/.js  ottavo strumento, gli allenamenti
 estratto.js           il lettore di estratti conto
 bordi.js              trova i bordi del foglio nelle foto
+firma.js              il tratto della firma, a spessore variabile
+salva_i_file.py       scarica i PDF e le scansioni sul tuo computer
 famiglia.css/.js      stile e funzioni comuni
 sw.js                 funzionamento offline
 manifest.webmanifest  installazione sul telefono
@@ -56,6 +64,14 @@ Su supabase.com, nel tuo progetto, apri **SQL Editor** ed esegui i tre file
 5. `database/schema5.sql` · le note sui movimenti, i nomi personalizzati e
    gli esercenti
 6. `database/schema6.sql` · i documenti di casa e le auto
+7. `database/schema7.sql` · le firme
+8. `database/schema8.sql` · i viaggi, e le percentuali che calcolano il
+   prezzo di rivendita dei libri
+9. `database/schema9.sql` · gli allenamenti, con le tre schede di Stefano
+   gia' dentro
+10. `database/schema10.sql` · i tempi e i carichi degli esercizi, e la
+    bilancia: peso, massa grassa, massa muscolare, massa ossea e acqua.
+    Non tocca le schede che hai gia' scritto
 
 ### 2. Chi può entrare
 
@@ -361,6 +377,248 @@ duplicato.
 
 ---
 
+## Le ultime novità
+
+### Il prezzo di rivendita si calcola da solo
+
+Le percentuali c'erano nel disegno del database fin dall'inizio, ma non le
+aveva mai scritte nessuno: il campo "prezzo rivendita" restava un campo
+vuoto da riempire a mano, libro per libro, decidendo ogni volta quanto vale
+un «buono» rispetto a un «ottimo». Duecento libri e duecento decisioni, mai
+uguali fra loro.
+
+Adesso scegli la condizione, scrivi il prezzo di copertina, e il prezzo di
+rivendita compare da solo. Sotto il campo una riga spiega il conto: *«con
+"ottimo" resta il 50% di 20,00 €, cioè 10,00 €»*. Non è un numero calato
+dall'alto: si vede da dove viene.
+
+Le percentuali di partenza ricalcano la scala di Vinted (nuovo con
+cartellino, nuovo senza, ottimo, buono, discreto), con due gradini in più in
+fondo perché i libri dei bambini si rovinano davvero e «discreto» non basta
+a descrivere una copertina staccata:
+
+| Condizione | Resta | Un libro da 20 € |
+|---|---|---|
+| nuovo | 70% | 14,00 € |
+| ottimo | 50% | 10,00 € |
+| buono | 40% | 8,00 € |
+| discreto | 28% | 5,50 € |
+| rovinato | 15% | 3,00 € |
+| rotto | 0% | — |
+
+La percentuale è **quanto resta**, non quanto si sconta. Sono numeri
+prudenti: sui libri per ragazzi usati, su Vinted, superare la metà del
+prezzo di copertina succede raramente.
+
+**Sotto i 3 euro non propone niente.** Invece di suggerire di vendere a 1,80
+un libro che costa 2,90 di spedizione e mezz'ora fra foto e messaggi, dice
+che non conviene e suggerisce di regalarlo. Un consiglio che fa perdere
+tempo è peggio di nessun consiglio.
+
+**Il calcolo propone, non impone.** Se scrivi tu un prezzo, quello resta:
+il riquadro cambia colore, ti dice che il tuo è più alto o più basso di
+quello calcolato, e ti offre un collegamento per tornare al suggerito.
+Un'edizione fuori catalogo o un libro firmato valgono più di qualunque
+percentuale, e il programma non può saperlo. Aprendo un libro già salvato
+il prezzo non viene mai toccato: sarebbe sgradevole che consultare una
+scheda la cambiasse.
+
+L'annuncio per Vinted usa il prezzo calcolato quando quello scritto manca,
+così non ti tocca completarlo a mano dentro l'app.
+
+**Se vuoi cambiare le percentuali** stanno su Supabase, nella tabella
+`settings`, alla riga `discounts`. Insieme a queste tre voci:
+
+- `minimo` · sotto questa cifra la vendita non viene proposta
+- `arrotonda` · a mezzo euro; metti `1` per l'euro intero, `0` per non arrotondare
+- `attivo` · `false` spegne il calcolo senza perdere le percentuali impostate
+
+### I nostri viaggi
+
+Il settimo strumento. Non è un'agenda di viaggio e non è un contapassi:
+è il posto dove un viaggio resta dopo che è finito.
+
+**La mappa.** Ogni luogo è un pin col colore della sua categoria: soggiorni,
+tour, musei, parchi, ristoranti, ma anche le cose che servono davvero e che
+nessuno segna mai, come la farmacia aperta fino alle dieci e il bancomat che
+accetta le carte estere. I luoghi visitati hanno la spunta verde, quelli
+ancora da vedere restano scuri: si capisce a colpo d'occhio cosa manca.
+
+L'indirizzo lo cerchi scrivendolo, e le coordinate arrivano da sole.
+
+**Le tratte.** Ogni spostamento ha un mezzo, e ogni mezzo ha la sua linea: il
+volo è un arco punteggiato, il treno un tratteggio lungo, l'auto una linea
+piena. Le tratte in auto **seguono le strade vere**, non la linea d'aria:
+i chilometri che leggi sono quelli che farai. Se il servizio delle mappe non
+risponde, ripiega sull'arco invece di lasciare la mappa vuota.
+
+I km si calcolano da soli, ma se ne scrivi uno a mano quello resta: il
+calcolo automatico non lo sovrascrive più.
+
+**Le spese.** Ogni spesa dice chi ha pagato, e il riquadro in cima mostra il
+totale, la ripartizione per categoria e quella per persona.
+
+Non c'è nessun conto da pareggiare: è tutto in famiglia, i soldi escono dallo
+stesso cassetto. Sapere chi ha pagato serve a un'altra cosa: ritrovare la
+spesa sull'estratto conto giusto quando, mesi dopo, controlli le spese di casa
+e ti chiedi cos'era quell'addebito di 340 € a Osaka.
+
+Se metti un budget, la barra ti dice quanto ne resta, e diventa rossa se lo
+sfori.
+
+**I biglietti.** Carte d'imbarco, voucher, visti, contratti di noleggio.
+Stanno nell'**archivio privato**, come i referti: un voucher d'albergo ha
+dentro nome, cognome e numero di prenotazione, e non ha senso lasciarlo in
+un magazzino pubblico. Ogni volta che ne apri uno il collegamento viene
+creato al momento e scade dopo un'ora.
+
+Ogni documento si può agganciare a un luogo: il voucher dell'hotel sta sotto
+l'hotel, e lo ritrovi quando ti serve invece che rovistando in un elenco.
+
+**Il diario.** Un giorno alla volta, la sera. Fra dieci anni sarà l'unica
+parte che riaprirai davvero: i chilometri e le spese interessano mentre il
+viaggio è in corso, il resto no.
+
+**Chi viaggia.** Non due caselle fisse ma un elenco: Stefano e Ilaria sono
+già scritti quando crei un viaggio nuovo, ma si tolgono con un tocco e se ne
+aggiungono quanti servono. Le bambine, i nonni, gli amici.
+
+Se togli qualcuno che aveva spese a suo nome il programma te lo dice prima:
+quelle spese restano nel totale, ma senza un nome accanto. Sparire in
+silenzio sarebbe peggio.
+
+**Le liste, e quelle che tornano ogni volta.** La valigia non è più un elenco
+unico: sono liste separate, ognuna col suo nome. Una per i vestiti, una per i
+documenti, una per la farmacia, una per la macchina fotografica.
+
+Quando ne crei una puoi segnarla **ricorrente**. Da quel momento diventa un
+modello di casa, e ogni viaggio nuovo se la ritrova dentro, già pronta da
+spuntare. La farmacia da viaggio si scrive una volta sola.
+
+Le liste dentro un viaggio sono **copie** del modello, non collegamenti:
+spuntare «passaporti» per il Giappone non lo spunta anche per la Puglia, e
+togliere una voce qui non la toglie a tutti. Quando invece una modifica deve
+valere per sempre c'è un pulsante apposta, dentro la lista, che riporta le
+voci nel modello. È una scelta esplicita, non un effetto collaterale.
+
+Dal pulsante **«Le liste ricorrenti»** vedi tutti i modelli, ne aggiungi uno a
+un viaggio in corso, o ne togli uno dal giro. Toglierlo non cancella niente:
+le liste già copiate restano dove sono, diventano liste normali.
+
+**E il portale te lo dice.** Sulla card dei viaggi non c'è il numero dei
+viaggi, che non serve a nessuno: c'è «mancano 12 giorni», oppure «in
+viaggio» se siete via. La stessa idea dei documenti di casa: l'informazione
+utile è quella che ti risparmia di entrare a cercarla.
+
+**Il salvataggio settimanale include i viaggi** e lo script `salva_i_file.py`
+scarica anche le foto: non c'è niente di nuovo da configurare.
+
+---
+
+### L'allenamento
+
+L'ottavo strumento. Non e' un contapassi e non e' un personal trainer:
+e' il foglio della palestra, ma che cronometra e che si ricorda tutto.
+
+**I programmi.** Un programma e' una scheda: un nome, la persona a cui e'
+intestata, e gli esercizi in ordine, ognuno con serie e ripetizioni come
+stanno scritte sul foglio (3x12, 20 reps, 10 min) e il recupero. Le tre
+schede di Stefano sono gia' dentro. Ne crei altre quando vuoi, intestate
+a chiunque: le persone sono le stesse della cartella clinica, non un
+secondo elenco da tenere allineato a mano.
+
+Il pulsante **Duplica** copia una scheda per un'altra persona. Le schede
+di casa si somigliano, e riscrivere sette esercizi sarebbe una punizione.
+
+**Il cronometro capisce da solo cosa sei.** Quello che scrivi nella
+colonna "serie / rip." non e' un dato, e' una frase scritta a mano. L'app
+la legge e decide:
+
+- `10 min`, `45"`, `3x30"` · **conto alla rovescia**. Parte, scende, e
+  negli ultimi tre secondi fa tre bip. Non devi guardarlo.
+- `4x12`, `20 reps`, `4x max` · **cronometro che sale da zero**, e lo
+  fermi tu quando hai finito le ripetizioni. Nessuno ti mette fretta:
+  serve solo a sapere, fra sei mesi, quanto ci mettevi.
+
+Mentre scrivi la scheda, sotto a ogni riga c'e' scritto come verra'
+cronometrata. Se sbaglia lo vedi li', non a meta' serie.
+
+Quando le serie sono piu' d'una (`3x30"`), fra l'una e l'altra il
+**recupero parte da solo**, letto dalla colonna del recupero, e a zero
+suona. Alla fine di un esercizio il recupero c'e' lo stesso, ma su un
+pulsante: e' un'offerta, non un obbligo.
+
+**Il peso e la velocita'.** Prima di far partire ogni esercizio l'app
+chiede una cosa sola, quella giusta:
+
+- se il nome sa di macchina (tapis, cyclette, vogatore, ellittica...)
+  chiede la **velocita', da 1 a 10**, con dieci pulsanti grossi;
+- per tutto il resto chiede il **peso in chili**, con il piu' e il meno
+  da mezzo chilo, perche' con le mani sudate la tastiera e' un nemico.
+
+Nessuno dei due e' obbligatorio: gli elastici, la corda e le flessioni
+non hanno chili, e va benissimo lasciare vuoto. Se l'app sbaglia a
+indovinare, sotto c'e' sempre *«…e anche l'altro»*.
+
+Sotto al campo trovi scritto **quanto avevi messo l'ultima volta**, ed e'
+gia' precompilato. Perche' la domanda vera, davanti ai manubri, non e'
+mai "quanti chili?" ma "quanti chili avevo messo l'altra volta?".
+
+**L'esecuzione.** Vedi **un esercizio alla volta**, scritto grande, con
+il quadrante nel mezzo. Sotto, l'elenco di tutti gli altri con i tempi
+gia' fatti, cosi' sai sempre quanto manca. In alto a destra un orologio
+dice da quanto sei li'.
+
+Il telefono **resta sveglio** finche' ti alleni. Se lo metti in tasca e
+lo riprendi, il cronometro e' gia' giusto: i conti sono sull'orologio di
+sistema, non sui battiti del browser.
+
+Se ti fermi a meta' e chiudi, l'allenamento non sparisce: viene salvato
+segnato come **interrotto**. Un allenamento fatto a meta' e' comunque
+successo, e cancellarlo sarebbe raccontarsi una bugia.
+
+**Lo storico.** Una riga per allenamento, con quanto e' durato. Toccando
+una riga la riapri: i pesi, le note, e gli esercizi **come erano quel
+giorno**, ognuno col suo tempo, i suoi chili e la sua velocita'. Se fra
+sei mesi cambi la scheda, lo storico continua a dire cosa avevi fatto
+davvero. Un archivio che cambia quando cambi il presente non e' un
+archivio.
+
+**I progressi.** Due domande diverse, e quindi due grafici. Il primo dice
+quanto durano gli allenamenti. Il secondo lo scegli tu, esercizio per
+esercizio: come sale il carico degli stacchi, come cresce la velocita'
+del tapis, come cala il tempo di un circuito. Gli esercizi vengono dagli
+allenamenti *fatti*, non dalle schede: uno che hai tolto dalla scheda il
+mese scorso ha comunque una storia, e buttarla via sarebbe la cosa piu'
+stupida che questa pagina possa fare.
+
+**Il corpo.** La bilancia nuova legge cinque cose, e le vuole tutte:
+peso, massa grassa, massa muscolare, massa ossea e acqua. Ogni volta che
+sali, una riga. Solo il peso e' obbligatorio: se un giorno la bilancia
+dice meno cose, la riga resta buona lo stesso. La massa muscolare la
+scrivi in chili o in percentuale, come te la da' la tua bilancia: c'e' un
+pulsantino che cambia unita', perche' 55 puo' essere 55 kg o 55%, e su un
+corpo umano sono due frasi entrambe credibili.
+
+Scrivi l'altezza una volta sola (sta sulla persona, non sulla pesata:
+chiederla ogni volta sarebbe una piccola offesa) e compare il **BMI**,
+con la fascia colorata e dove cadi. Con una nota onesta accanto: il BMI
+e' solo peso diviso altezza al quadrato, non sa distinguere un chilo di
+muscolo da un chilo di grasso, e su chi si allena tende a esagerare. La
+massa grassa, che la bilancia ti dice, e' una misura migliore.
+
+Il grafico cambia metrica con un tocco: peso, grasso, muscolo, osso,
+acqua, BMI. Il peso che segni prima di allenarti diventa una pesata da
+solo, cosi' non devi scriverlo due volte -- ma se quel giorno ti eri gia'
+pesato per bene, quella riga non viene toccata: la tua ha dentro anche la
+massa grassa, e sarebbe uno scambio in perdita.
+
+**E il portale te lo dice.** Sulla card non c'e' il numero degli
+allenamenti, che non serve a nessuno: c'e' «3 giorni fa». Dopo una
+settimana diventa rosso.
+
+---
+
 ## Il salvataggio: una cosa da sapere
 
 Il salvataggio settimanale copia **le tabelle**, cioè i testi: le ricette, i
@@ -369,10 +627,29 @@ libri, le spese, le schede cliniche, l'elenco dei documenti.
 **Non copia i file**: i PDF dei referti e delle scansioni. Sono nell'archivio
 di Supabase e il salvataggio automatico non li porta via.
 
-Per quelli, ogni tanto scaricali a mano dal pannello di Supabase
-(**Storage → privati → Download**) e tienili su un disco o su una chiavetta.
-Le copertine dei libri sono la stessa cosa, ma quelle si possono rifare; un
-referto del 2026, fra dieci anni, no.
+Per quelli c'è uno script che li scarica tutti in un colpo solo:
+
+```
+pip3 install requests      (solo la prima volta)
+python3 salva_i_file.py
+```
+
+La prima volta chiede l'indirizzo del progetto e la chiave `service_role`
+(le trovi su Supabase, in **Settings → API**) e le ricorda. Dalla seconda
+volta in poi scarica **solo quello che è cambiato**, quindi ci mette pochi
+secondi. I file finiscono nella cartella `backup_file`.
+
+Poi copiali su un disco esterno o una chiavetta. Un archivio che vive in un
+posto solo non è un archivio: è un'attesa.
+
+**Sulla chiave:** la `service_role` è una chiave da amministratore, chi ce
+l'ha entra in tutto il database senza password. Lo script la salva in un file
+nascosto accanto a sé, che il `.gitignore` esclude: non finisce su GitHub. Se
+preferisci non tenerla su disco, cancella `.salva_i_file.json` e passala ogni
+volta a mano (le istruzioni sono in fondo allo script).
+
+Le copertine dei libri si possono rifare; un referto del 2026, fra dieci anni,
+no.
 
 ---
 
