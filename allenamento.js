@@ -29,8 +29,11 @@ var PERSONE = [];
 var PROG = [];
 var SES = [];
 var MISURE = [];
-var VISTA = "prog";
+var VISTA = "diario";
 var FILTRO = "";          /* id della persona, "" = tutta la famiglia */
+/* La persona scelta resta scelta: sul telefono di ognuno, di solito, il
+   diario e' sempre lo stesso. Se il browser non ricorda, pazienza. */
+try { FILTRO = localStorage.getItem("allenamentoPersona") || ""; } catch (e) { }
 
 /* ---------- utilita' ---------- */
 
@@ -229,6 +232,7 @@ function load() {
     guard(sb.from("body_measurements").select("*").order("day", { ascending: false }), "pesate")
   ]).then(function (r) {
     PERSONE = r[0] || [];
+    if (FILTRO && !personaDi(FILTRO)) FILTRO = "";
     PROG = (r[1] || []).map(function (p) { p.exercises = normEs(p.exercises); return p; });
     SES = r[2] || [];
     MISURE = r[3] || [];
@@ -264,10 +268,13 @@ function misureDi(pid) {
 
 /* ---------- viste ---------- */
 
-var NOMI_VISTA = { prog: "vProg", stor: "vStor", prg: "vPrg", peso: "vPeso" };
+var NOMI_VISTA = { diario: "vDia", andam: "vAnd", prog: "vProg", stor: "vStor", prg: "vPrg", peso: "vPeso" };
 
 function render() {
   for (var v in NOMI_VISTA) $(NOMI_VISTA[v]).hidden = (v !== VISTA);
+  $("newBtn").style.display = (VISTA === "diario" || VISTA === "andam") ? "none" : "";
+  if (VISTA === "diario") renderDiario();
+  if (VISTA === "andam") renderAndamento();
   if (VISTA === "prog") renderProg();
   if (VISTA === "stor") renderStor();
   if (VISTA === "prg") renderPrg();
@@ -1005,6 +1012,17 @@ function ultimoUso(nome) {
 }
 
 function esCorrente() { return RUN.prog.exercises[RUN.passo]; }
+
+/* Il peso su cui stimare le calorie: quello segnato prima di partire,
+   altrimenti l'ultimo della bilancia. */
+function pesoRun() {
+  if (RUN && RUN.w1 != null) return RUN.w1;
+  return RUN ? pesoPer(RUN.prog.person_id, oggiISO()) : null;
+}
+function kcalPasso(k, extraSec) {
+  var e = RUN.prog.exercises[k], d = RUN.dati[k];
+  return kcalEsercizio(e.n, (d.sec || 0) + (extraSec || 0), d.vel, pesoRun());
+}
 function datiCorrenti() { return RUN.dati[RUN.passo]; }
 
 function iniziaEsercizio(i) {
@@ -1140,6 +1158,7 @@ function dipingi() {
     var coda = dd.sec ? mmss(dd.sec) : "";
     if (dd.kg != null) coda += (coda ? " · " : "") + fmtN(dd.kg, 1) + " kg";
     if (dd.vel != null) coda += (coda ? " · " : "") + "vel " + dd.vel;
+    if (dd.sec) coda += " · " + kcalPasso(k) + " kcal";
     return '<div class="' + cl + '"><span>' + (dd.fatto ? "✓" : (k + 1) + ".") + '</span><span class="nm">'
       + esc(x.n) + (x.s ? " · " + esc(x.s) : "") + '</span><span class="tm">' + esc(coda) + "</span></div>";
   }).join("");
@@ -1180,6 +1199,16 @@ function dipingiDial() {
 
   $("runTime").textContent = testo;
   $("runSub").textContent = sotto;
+
+  /* Le calorie di questo esercizio, mentre lo fai: "20 minuti di tapis,
+     quante ne ho bruciate?" ha la risposta sotto al quadrante. */
+  var extra = (ST.fase === "corsa") ? trascorsi() : 0;
+  var kc = kcalPasso(RUN.passo, extra);
+  var tot = 0;
+  RUN.dati.forEach(function (x, k) { tot += kcalPasso(k, k === RUN.passo ? extra : 0); });
+  $("runKcal").innerHTML = kc || tot
+    ? "<b>≈ " + kc + " kcal</b> in questo esercizio" + (tot > kc ? " · " + tot + " in tutto" : "")
+    : "";
   arco.style.strokeDashoffset = String(C * (1 - Math.max(0, Math.min(1, frazione))));
   dial.className = "dial" + (ST.fase === "riposo" ? " rest" : "") + (ST.pausa ? " pausa" : "");
 }
@@ -1299,14 +1328,21 @@ function riepilogo() {
   var lavoro = 0;
   RUN.dati.forEach(function (d) { lavoro += d.sec || 0; });
 
+  var kTot = 0;
+  RUN.dati.forEach(function (d, i) { kTot += kcalPasso(i); });
+  var pk = pesoRun();
+
   var h = '<div class="riep">'
     + "<div><b>Durata</b><span class=\"tm\"><b>" + esc(fmtDurata(tot)) + "</b></span></div>"
-    + "<div><span>di cui sotto sforzo</span><span class=\"tm\">" + esc(fmtDurata(lavoro)) + "</span></div>";
+    + "<div><span>di cui sotto sforzo</span><span class=\"tm\">" + esc(fmtDurata(lavoro)) + "</span></div>"
+    + "<div><b>Calorie bruciate</b><span class=\"tm\"><b>≈ " + esc(fmtKcal(kTot)) + "</b></span></div>"
+    + "<div><span>stima su " + (pk ? esc(fmtPeso(pk)) : "70 kg, perché non hai un peso segnato") + ": finisce nel diario di oggi</span></div>";
   es.forEach(function (e, i) {
     var d = RUN.dati[i];
     var coda = d.sec ? mmss(d.sec) : "—";
     if (d.kg != null) coda += " · " + fmtN(d.kg, 1) + " kg";
     if (d.vel != null) coda += " · vel " + d.vel;
+    if (d.sec) coda += " · " + kcalPasso(i) + " kcal";
     h += "<div" + (d.fatto ? "" : ' style="opacity:.5"') + '><span class="nm">' + (d.fatto ? "✓ " : "· ")
       + esc(e.n) + '</span><span class="tm">' + esc(coda) + "</span></div>";
   });
@@ -1339,7 +1375,17 @@ function salvaSessione() {
   var pid = dati.person_id;
 
   var btn = $("runSave"); btn.disabled = true; btn.textContent = "Salvo…";
-  guard(sb.from("workout_sessions").insert(dati), "salva allenamento").then(function () {
+  guard(sb.from("workout_sessions").insert(dati).select("id").single(), "salva allenamento").then(function (nuova) {
+    /* Le calorie di ogni esercizio vanno nel diario di oggi. Il peso
+       per la stima e' quello di partenza, se l'hai scritto. Se questa
+       scrittura fallisce (manca schema11.sql, la rete), l'allenamento
+       resta salvato: dal diario si recupera con un tocco. */
+    var righe = nuova && nuova.id
+      ? righeDaSessione(Object.assign({}, dati, { weight_before: w1 != null ? w1 : RUN.w1 }), nuova.id)
+      : [];
+    if (!righe.length) return null;
+    return Promise.resolve(sb.from("activity_entries").insert(righe)).catch(function () { return null; });
+  }).then(function () {
     /* Il peso segnato prima di allenarsi e' una pesata a tutti gli
        effetti: finisce anche nel grafico del corpo. Se pero' quel giorno
        ti eri gia' pesato per bene, quella riga la lascio stare: la sua
@@ -1356,7 +1402,8 @@ function salvaSessione() {
     btn.disabled = false; btn.textContent = "Salva l'allenamento";
     $("runModal").hidden = true;
     RUN = null; ST = null;
-    toast("Allenamento salvato");
+    DIA = null; AND_DATI = null;
+    toast("Allenamento salvato, calorie nel diario");
     load();
   }).catch(function () { btn.disabled = false; btn.textContent = "Salva l'allenamento"; });
 }
@@ -1412,6 +1459,8 @@ function apriSessione(id) {
           if (p.serie) coda += (coda ? " · " : "") + p.serie + (p.serie === 1 ? " serie" : " serie");
           if (p.kg != null) coda += (coda ? " · " : "") + fmtN(p.kg, 1) + " kg";
           if (p.vel != null) coda += (coda ? " · " : "") + "vel " + p.vel;
+          if (p.sec) coda += " · ≈" + kcalEsercizio(p.n, p.sec, p.vel,
+            s.weight_before != null ? Number(s.weight_before) : pesoPer(s.person_id, s.day)) + " kcal";
           return "<div" + (p.fatto ? "" : ' style="opacity:.5"') + '><span class="nm">' + (p.fatto ? "✓ " : "· ")
             + esc(p.n) + (p.s ? " · " + esc(p.s) : "") + '</span><span class="tm">' + esc(coda) + "</span></div>";
         }).join("")
@@ -1439,6 +1488,7 @@ function eliminaSes() {
   if (!confirm("Elimino l'allenamento del " + fmtGiornoLungo(SESEDIT.day) + "?")) return;
   guard(sb.from("workout_sessions").delete().eq("id", SESEDIT.id), "elimina allenamento").then(function () {
     $("sesModal").hidden = true;
+    DIA = null; AND_DATI = null;   /* con lui se ne vanno le sue calorie */
     toast("Eliminato");
     load();
   });
@@ -1451,12 +1501,15 @@ function eliminaSes() {
 var MISEDIT = null;
 var MIU = "kg";     /* l'unita' della massa muscolare, come la scrive la tua bilancia */
 
-function apriMisura(id) {
+/* preset: { day, person_id } quando la pesata parte dal diario di un
+   giorno preciso, cosi' non devi cambiare la data a mano. */
+function apriMisura(id, preset) {
   MISEDIT = id ? MISURE.filter(function (m) { return m.id === id; })[0] : null;
   var m = MISEDIT;
+  preset = preset || {};
   $("misTitle").textContent = m ? "Modifica la pesata" : "Una pesata";
-  $("miD").value = m ? String(m.day).slice(0, 10) : oggiISO();
-  $("miP").value = m ? (m.person_id || "") : (personaCorpo() || FILTRO || (PERSONE[0] ? PERSONE[0].id : ""));
+  $("miD").value = m ? String(m.day).slice(0, 10) : (preset.day || oggiISO());
+  $("miP").value = m ? (m.person_id || "") : (preset.person_id || personaCorpo() || FILTRO || (PERSONE[0] ? PERSONE[0].id : ""));
   $("miW").value = m && m.weight != null ? m.weight : "";
   $("miF").value = m && m.fat_pct != null ? m.fat_pct : "";
   $("miA").value = m && m.water_pct != null ? m.water_pct : "";
@@ -1513,18 +1566,26 @@ function eliminaMisura() {
    AVVIO
    ===================================================================== */
 
-$("top").innerHTML = toolHeader("L'allenamento", "Le schede di casa, passo passo");
+$("top").innerHTML = toolHeader("L'allenamento", "Quello che mangi, quello che fai, quanto pesi");
 
 document.querySelectorAll(".tabs button").forEach(function (b) {
-  b.addEventListener("click", function () {
-    document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.remove("on"); });
-    b.classList.add("on");
-    VISTA = b.dataset.v;
-    render();
-  });
+  b.addEventListener("click", function () { mostraVista(b.dataset.v); });
 });
 
-$("fPers").addEventListener("change", function () { FILTRO = this.value; render(); });
+$("fPers").addEventListener("change", function () { impostaFiltro(this.value); });
+
+function impostaFiltro(id) {
+  FILTRO = id || "";
+  try { localStorage.setItem("allenamentoPersona", FILTRO); } catch (e) { }
+  $("fPers").value = FILTRO;
+  render();
+}
+function mostraVista(v) {
+  VISTA = v;
+  document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.toggle("on", x.dataset.v === v); });
+  render();
+  window.scrollTo(0, 0);
+}
 $("newBtn").addEventListener("click", function () { apriEditor(null); });
 
 $("edClose").addEventListener("click", function () { $("edModal").hidden = true; });

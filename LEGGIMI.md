@@ -12,8 +12,9 @@ solo da te e da tua moglie, sincronizzato fra i due telefoni.
   delle auto, con l'avviso prima che scadano
 - **I nostri viaggi** · i luoghi sulla mappa, le tratte, le spese divise,
   i biglietti e il diario della sera
-- **L'allenamento** · le schede di casa, un esercizio alla volta, il peso
-  prima e dopo e il grafico di come va
+- **L'allenamento** · il diario di ogni giorno (cosa mangi, cosa bruci,
+  quanto pesi), le schede di casa un esercizio alla volta, e il grafico
+  di come va
 
 Tutto gratuito: il sito su hosting statico, i dati su Supabase (piano gratuito).
 
@@ -31,6 +32,7 @@ scanner.html          quinto strumento, lo scanner
 documenti.html        sesto strumento, i documenti di casa
 viaggi.html/.js       settimo strumento, il diario di viaggio
 allenamento.html/.js  ottavo strumento, gli allenamenti
+diario.js             il diario della giornata e l'andamento, dentro l'allenamento
 estratto.js           il lettore di estratti conto
 bordi.js              trova i bordi del foglio nelle foto
 firma.js              il tratto della firma, a spessore variabile
@@ -72,6 +74,9 @@ Su supabase.com, nel tuo progetto, apri **SQL Editor** ed esegui i tre file
 10. `database/schema10.sql` · i tempi e i carichi degli esercizi, e la
     bilancia: peso, massa grassa, massa muscolare, massa ossea e acqua.
     Non tocca le schede che hai gia' scritto
+11. `database/schema11.sql` · il diario della giornata: i pasti, le
+    attivita' con le calorie, e il totale di ogni giorno. Non tocca
+    niente di quello che c'e' gia'
 
 ### 2. Chi può entrare
 
@@ -612,6 +617,50 @@ acqua, BMI. Il peso che segni prima di allenarti diventa una pesata da
 solo, cosi' non devi scriverlo due volte -- ma se quel giorno ti eri gia'
 pesato per bene, quella riga non viene toccata: la tua ha dentro anche la
 massa grassa, e sarebbe uno scambio in perdita.
+
+**La giornata.** E' la prima scheda che vedi. In alto il giorno, con le
+frecce per andare avanti e indietro (toccando la data si apre il
+calendario), e quattro numeri: calorie assunte, calorie bruciate con
+l'attivita', la differenza, e il peso del giorno. Toccando il peso lo
+segni, gia' con la data giusta.
+
+Sotto, i sei momenti in cui mangi: **colazione, merenda del mattino,
+pranzo, merenda del pomeriggio, cena, dopo cena**. Col **+** aggiungi
+una cosa: cosa, porzione, grammi se li sai, calorie. Non serve sapere
+le calorie a memoria: scrivendo il nome compare una lista, prima con i
+cibi che hai gia' segnato (con porzione e calorie dell'ultima volta) e
+poi con una tabella di un'ottantina di cibi comuni. Cambi i grammi e le
+calorie si ricalcolano. Sono numeri indicativi, e l'ultima parola e'
+tua: se scrivi le calorie a mano, l'app non le tocca piu'. *Salva e
+aggiungi altro* resta nello stesso pasto, per quando la cena e' di
+quattro cose.
+
+Poi **l'attivita'**. Scegli (tapis roulant, camminata, bici, pesi...) e
+scrivi i minuti: le calorie le stima l'app, e sotto ti fa vedere il
+conto, per esempio *MET 5,0 × 79,2 kg × 20 min = 132 kcal*. Il MET e'
+quanto un'attivita' costa rispetto allo stare seduti; il peso e'
+l'ultimo che hai segnato. Per il tapis puoi dire anche la velocita', che
+cambia molto il risultato.
+
+Gli allenamenti fatti col cronometro **finiscono nel diario da soli**:
+alla fine di ogni allenamento, una riga per esercizio con i minuti e le
+calorie. E mentre ti alleni, sotto al quadrante c'e' scritto quante ne
+hai bruciate in quell'esercizio e in tutto. Per gli allenamenti fatti
+prima del diario compare un avviso con un pulsante: un tocco e le loro
+calorie entrano.
+
+Le calorie bruciate contano solo l'attivita', non quello che il corpo
+consuma da solo per vivere: servono a confrontare un giorno con l'altro,
+non a fare i conti al grammo.
+
+**L'andamento.** Sette giorni, un mese, tre mesi o un anno: le calorie
+assunte e bruciate giorno per giorno su un grafico, il peso su un altro,
+e sotto una tabella con tutto insieme. Tocca un giorno e lo riapri. I
+giorni in cui non hai segnato niente da mangiare restano fuori dalle
+medie: contarli come zero farebbe sembrare che hai digiunato.
+
+Il diario e l'andamento sono di una persona sola: la persona scelta in
+alto resta scelta sul telefono, cosi' non devi sceglierla ogni volta.
 
 **E il portale te lo dice.** Sulla card non c'e' il numero degli
 allenamenti, che non serve a nessuno: c'e' «3 giorni fa». Dopo una
